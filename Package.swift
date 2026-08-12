@@ -38,10 +38,44 @@ let package = Package(
         .executable(name: "modrunner", targets: ["ModRunnerCLI"]),
     ],
     targets: interfaceTargets + [
+        // miniaudio, vendored: one header that is also its own implementation.
+        // It is what plays sound on Linux and Windows, and it is built on macOS
+        // too — not because anything uses it there by default, but so the path
+        // the other platforms depend on is compiled and runnable on the machine
+        // this is developed on. `MODRUNNER_AUDIO_BACKEND=miniaudio` selects it.
+        //
+        // Everything above device output is switched off. miniaudio can decode
+        // WAV, FLAC and MP3, mix graphs and synthesise tones; this project has
+        // its own replayer and its own WAV writer, and the unused half is a
+        // slow compile and a larger binary for nothing.
+        .target(
+            name: "CMiniaudio",
+            path: "Sources/CMiniaudio",
+            cSettings: [
+                .define("MA_NO_DECODING"),
+                .define("MA_NO_ENCODING"),
+                .define("MA_NO_WAV"),
+                .define("MA_NO_FLAC"),
+                .define("MA_NO_MP3"),
+                .define("MA_NO_GENERATION"),
+                .define("MA_NO_RESOURCE_MANAGER"),
+                .define("MA_NO_NODE_GRAPH"),
+                .define("MA_NO_ENGINE")
+            ],
+            linkerSettings: [
+                // miniaudio opens the system's audio library itself, so there
+                // is nothing to link against for ALSA or PulseAudio — but it
+                // needs the loader and the threads to do it with.
+                .linkedLibrary("dl", .when(platforms: [.linux])),
+                .linkedLibrary("m", .when(platforms: [.linux])),
+                .linkedLibrary("pthread", .when(platforms: [.linux]))
+            ]
+        ),
         // Loader, replayer, output and the interface strings. No AppKit, no
         // SwiftUI: everything here runs without a window server.
         .target(
             name: "ModRunnerKit",
+            dependencies: ["CMiniaudio"],
             path: "Sources/ModRunnerKit",
             resources: [.process("Resources")],
             swiftSettings: [.swiftLanguageMode(.v5)]

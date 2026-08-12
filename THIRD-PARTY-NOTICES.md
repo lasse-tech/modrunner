@@ -1,9 +1,24 @@
 # Third-party notices and credits
 
-`ModRunner` itself has no third-party code dependencies — it builds against
-Apple's SDK frameworks only. The material listed here is documentation and
-reference source that shaped the implementation, plus the people whose work made
-any of this possible. Credit where credit is due.
+`ModRunner` carries one piece of third-party code: miniaudio, which plays the
+sound on Linux and Windows. Everything else it builds against is Apple's own
+SDK. The rest of the material listed here is documentation and reference source
+that shaped the implementation, plus the people whose work made any of this
+possible. Credit where credit is due.
+
+---
+
+## miniaudio
+
+**David Reid** (mackron). A single-header C audio library, vendored at
+`Sources/CMiniaudio/include/miniaudio.h` (v0.11.25). It is the output backend
+everywhere except Apple's platforms, where AVFoundation is used instead.
+
+Dual licensed, at your option, as **public domain** (Unlicense) or **MIT No
+Attribution** — the licence text is at the end of the header itself. Both permit
+redistribution without conditions; this notice is a courtesy, not an obligation.
+
+Upstream: <https://github.com/mackron/miniaudio>
 
 ---
 

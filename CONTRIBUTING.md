@@ -13,8 +13,10 @@ make run        # build and play the example modules
 make help       # everything else
 ```
 
-You need macOS 13 or newer and a Swift 6 toolchain. There are no third-party
-dependencies and none should be added without a good reason.
+You need macOS 13 or newer and a Swift 6 toolchain. Exactly one piece of
+third-party code is in the tree — miniaudio, vendored, and only because Linux
+and Windows have no AVFoundation to play through. Nothing is fetched at build
+time, and nothing else should be added without a good reason.
 
 ## Ground rules for playback changes
 
@@ -51,6 +53,7 @@ what it is actually doing. Set these when running the binary directly:
 |---|---|
 | `MODRUNNER_PRINT_WINDOW_ID=1` | Prints the window id and frame, then every two seconds the chrome state: skin, style mask, whether a system title bar is layered over the content, origin, button visibility |
 | `MODRUNNER_AUDIO_DEBUG=1` | Prints sample rate, device presentation latency, buffer latency and the total the display compensates for; also logs configuration changes |
+| `MODRUNNER_AUDIO_BACKEND=miniaudio` | Plays through miniaudio instead of AVFoundation. The macOS default is AVFoundation; this is how the backend Linux and Windows depend on can be exercised on a Mac |
 | `MODRUNNER_SIMULATE_DEVICE_CHANGE=1` | Posts a synthetic engine configuration change three seconds after start, to exercise the device-switch path without taking over the machine's audio output |
 
 ```sh

@@ -1,11 +1,9 @@
 import Foundation
 import ModRunnerKit
 
-#if canImport(AVFoundation)
-
-/// `play` needs a real output device, and over SSH without a logged-in Aqua
-/// session CoreAudio usually has none. It fails with that said plainly rather
-/// than pretending to play to nothing; `info`, `render` and `dump` run anywhere.
+/// `play` needs a real output device, and over SSH without a logged-in session
+/// there usually is none. It fails with that said plainly rather than
+/// pretending to play to nothing; `info`, `render` and `dump` run anywhere.
 enum LivePlayback {
 
     static func run(paths: [String]) throws -> Int32 {
@@ -44,19 +42,3 @@ enum LivePlayback {
         return 0
     }
 }
-
-#else
-
-/// Off Apple's platforms there is no output backend yet, so `play` says so
-/// instead of failing somewhere less obvious. Everything that renders rather
-/// than sounds works exactly as it does on macOS.
-enum LivePlayback {
-
-    static func run(paths: [String]) throws -> Int32 {
-        warn("play is not supported on this platform: it has no audio backend yet")
-        warn("`render` writes the same audio to a WAV file and works everywhere")
-        return 2
-    }
-}
-
-#endif

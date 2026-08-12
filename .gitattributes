@@ -11,3 +11,5 @@ Examples/*.med  binary
 
 # Keep vendored reference source out of language statistics and diffs.
 docs/openmpt_*.cpp linguist-vendored
+# Without this one file GitHub calls the project a C repository.
+Sources/CMiniaudio/include/miniaudio.h linguist-vendored

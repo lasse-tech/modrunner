@@ -3,7 +3,7 @@
 [![Release](https://img.shields.io/github/v/release/lasse-tech/modrunner?label=download&color=EDE6E0&labelColor=231D18)](https://github.com/lasse-tech/modrunner/releases/latest)
 ![macOS 13+](https://img.shields.io/badge/macOS-13%2B-17130F?logo=apple&logoColor=white)
 ![Swift 6.0](https://img.shields.io/badge/Swift-6.0-FF6B35?logo=swift&logoColor=white)
-![No dependencies](https://img.shields.io/badge/dependencies-none-2E7D32)
+![Dependencies](https://img.shields.io/badge/dependencies-1%20vendored-2E7D32)
 ![Licence Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-3B67A2)
 ![Formats](https://img.shields.io/badge/formats-MMD0%20%C2%B7%20MMD1%20%C2%B7%20MOD-FFA997?labelColor=17130F)
 ![Languages](https://img.shields.io/badge/languages-EN%20%C2%B7%20DE-3B67A2?labelColor=17130F)
@@ -85,8 +85,10 @@ make associate  # open .med and .mod files with ModRunner
 make help       # every target, with the variables you can override
 ```
 
-Requires macOS 13+ and a Swift 6 toolchain. There are **no third-party
-dependencies** — only Apple's own SwiftUI, AppKit and AVFoundation.
+Requires macOS 13+ and a Swift 6 toolchain. The macOS app has **no third-party
+dependencies** — only Apple's own SwiftUI, AppKit and AVFoundation. There is
+nothing to fetch: the one vendored library, miniaudio, sits in the tree and is
+only what plays the sound where AVFoundation does not exist.
 
 You can also point the app at your own modules:
 
@@ -118,6 +120,15 @@ when it has none.
 make cli                                     # build it
 make info MODULE="Examples/Happy Hour.med"   # or run it through make
 ```
+
+### Other platforms
+
+The window is macOS only — it is SwiftUI and AppKit, and the Workbench skin is
+drawn by hand on top of them. The engine and `modrunner` are not: both build and
+run their test suites on **Linux and Windows** on every push, and `play` finds a
+device there through miniaudio (ALSA, PulseAudio, PipeWire or JACK on Linux,
+WASAPI on Windows). Nothing needs installing to build it — miniaudio opens the
+system's audio library at run time rather than linking against it.
 
 ## Examples
 

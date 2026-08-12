@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The engine and `modrunner` build and pass their tests on Linux and Windows,
+  checked on every push. The interface stays macOS only
+- Audio output is behind a backend protocol: AVFoundation on Apple's platforms,
+  miniaudio everywhere else, selectable with `MODRUNNER_AUDIO_BACKEND`
+
 ## [1.0.0] - 2026-08-12
 
 ### Added

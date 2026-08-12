@@ -1,8 +1,7 @@
-// Live output is the one place in the engine that reaches for an Apple
-// framework. Everything else here — loader, replayer, filter, WAV writer —
-// is Foundation only, so guarding this file is what lets the engine and the
-// command line build on Linux and Windows. Those platforms need a backend of
-// their own before `play` can do anything; `render` never touched this.
+// The output backend for Apple's platforms. AVFoundation knows about device
+// switching, presentation latency and the hardware sample rate without being
+// asked, which is why it stays the default here rather than everything going
+// through miniaudio for the sake of one code path.
 #if canImport(AVFoundation)
 import AVFoundation
 
@@ -14,7 +13,7 @@ import AVFoundation
 /// 300 ms, which is more than two pattern lines. Since the user can change
 /// device mid-song, the engine's configuration is watched and the latency —
 /// and, if the hardware rate changed with it, the whole graph — is rebuilt.
-public final class AudioOutput {
+final class AVFoundationSink: AudioSink {
 
     private let engine = AVAudioEngine()
     private let replayer: Replayer
@@ -23,14 +22,9 @@ public final class AudioOutput {
     private var currentSampleRate: Double = 0
     private(set) var isRunning = false
 
-    /// Frames requested by the last render call, for the latency diagnostic.
-    public nonisolated(unsafe) static var observedRenderFrames = 0
+    private var debugging: Bool { AudioOutput.isDebugging }
 
-    private var debugging: Bool {
-        ProcessInfo.processInfo.environment["MODRUNNER_AUDIO_DEBUG"] == "1"
-    }
-
-    public init(replayer: Replayer) {
+    init(replayer: Replayer) {
         self.replayer = replayer
     }
 
@@ -42,7 +36,7 @@ public final class AudioOutput {
 
     // MARK: - Lifecycle
 
-    public func start() throws {
+    func start() throws {
         guard !isRunning else {
             // Latency can change without the graph being rebuilt — a Bluetooth
             // codec switch, for one — so refresh it whenever playback starts.
@@ -65,7 +59,7 @@ public final class AudioOutput {
         }
     }
 
-    public func stop() {
+    func stop() {
         guard isRunning else { return }
         engine.stop()
         teardownNode()
