@@ -8,6 +8,10 @@ import SwiftUI
 struct ChannelMeters: View {
 
     let levels: [Float]
+    /// Channels the listener has silenced, and the callbacks to change that.
+    var muted: Set<Int> = []
+    var onToggleMute: ((Int) -> Void)? = nil
+    var onSolo: ((Int) -> Void)? = nil
     var barWidth: CGFloat = 14
     /// Total height including the channel numbers, so the meters occupy the
     /// same box as the other visualisations.
@@ -23,10 +27,21 @@ struct ChannelMeters: View {
             ForEach(Array(levels.enumerated()), id: \.offset) { index, level in
                 VStack(spacing: Self.labelSpacing) {
                     bar(level: CGFloat(level), peak: CGFloat(peak(at: index)))
+                        .opacity(muted.contains(index) ? 0.28 : 1)
+
+                    // The number doubles as a mute button; double-click solos.
                     Text("\(index + 1)")
                         .font(.system(size: 9, weight: .medium, design: .rounded))
-                        .foregroundStyle(.tertiary)
-                        .frame(height: Self.labelHeight)
+                        .foregroundStyle(muted.contains(index)
+                                         ? AnyShapeStyle(Brand.orange) : AnyShapeStyle(.tertiary))
+                        .strikethrough(muted.contains(index))
+                        .frame(width: barWidth, height: Self.labelHeight)
+                        .contentShape(Rectangle())
+                        .onTapGesture(count: 2) { onSolo?(index) }
+                        .onTapGesture { onToggleMute?(index) }
+                        .help(muted.contains(index)
+                              ? "Channel \(index + 1) is muted — click to unmute, double-click to solo"
+                              : "Click to mute channel \(index + 1), double-click to solo it")
                 }
             }
         }

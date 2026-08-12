@@ -158,6 +158,20 @@ final class Replayer {
 
     private let history = PlaybackHistory()
 
+    /// Channels the listener has silenced. Muted voices still advance, so
+    /// unmuting drops back into the music rather than restarting a note.
+    private var mutedVoices = Set<Int>()
+
+    func setMuted(_ muted: Bool, channel: Int) {
+        lock.lock(); defer { lock.unlock() }
+        if muted { mutedVoices.insert(channel) } else { mutedVoices.remove(channel) }
+    }
+
+    func isMuted(channel: Int) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        return mutedVoices.contains(channel)
+    }
+
     /// Reported by the audio device; see PlaybackHistory for why it matters.
     func setOutputLatency(seconds: Double) {
         lock.lock(); defer { lock.unlock() }
@@ -401,9 +415,11 @@ final class Replayer {
             let gainL = isLeft ? near : far
             let gainR = isLeft ? far : near
 
-            var targetVolume = Float(voices[index].volume) / 64.0
-                * Float(voices[index].trackVolume) / 64.0
-                * masterScale
+            var targetVolume = mutedVoices.contains(index)
+                ? 0
+                : Float(voices[index].volume) / 64.0
+                    * Float(voices[index].trackVolume) / 64.0
+                    * masterScale
             // Reach the target in about a millisecond.
             let rampStep = Float(1.0 / (sampleRate * 0.001))
             var rampedVolume = voices[index].rampedVolume

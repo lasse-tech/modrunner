@@ -102,7 +102,10 @@ struct NativeSkinView: View {
         HStack(alignment: .bottom, spacing: 20) {
             VisualizerView(style: visualizer,
                            levels: model.snapshot.channelMeters,
-                           samples: model.waveform)
+                           samples: model.waveform,
+                           muted: model.mutedChannels,
+                           onToggleMute: { model.toggleMute(channel: $0) },
+                           onSolo: { model.soloChannel($0) })
 
             VStack(alignment: .leading, spacing: 6) {
                 stat("Position", positionText)

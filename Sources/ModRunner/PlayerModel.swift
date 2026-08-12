@@ -23,6 +23,32 @@ final class PlayerModel: ObservableObject {
         didSet { replayer.gain = Float(volume) }
     }
 
+    /// Channels the listener has silenced, for picking a track out of the mix.
+    @Published private(set) var mutedChannels = Set<Int>()
+
+    func toggleMute(channel: Int) {
+        if mutedChannels.contains(channel) {
+            mutedChannels.remove(channel)
+            replayer.setMuted(false, channel: channel)
+        } else {
+            mutedChannels.insert(channel)
+            replayer.setMuted(true, channel: channel)
+        }
+    }
+
+    /// Silences everything except one channel, or clears a solo already set.
+    func soloChannel(_ channel: Int) {
+        let others = Set(0..<max(4, module?.numTracks ?? 4)).subtracting([channel])
+        if mutedChannels == others {
+            mutedChannels.removeAll()
+        } else {
+            mutedChannels = others
+        }
+        for i in 0..<max(4, module?.numTracks ?? 4) {
+            replayer.setMuted(mutedChannels.contains(i), channel: i)
+        }
+    }
+
     /// Shared instance so the app delegate can hand over files opened from the
     /// Finder or passed on the command line.
     static let shared = PlayerModel()

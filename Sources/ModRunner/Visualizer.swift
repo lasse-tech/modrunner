@@ -39,6 +39,9 @@ struct VisualizerView: View {
     let style: VisualizerStyle
     let levels: [Float]
     let samples: [Float]
+    var muted: Set<Int> = []
+    var onToggleMute: ((Int) -> Void)? = nil
+    var onSolo: ((Int) -> Void)? = nil
 
     /// Both visualisations occupy exactly this box. If they differed, switching
     /// between them would shift everything below in the window.
@@ -49,7 +52,9 @@ struct VisualizerView: View {
         Group {
             switch style {
             case .bars:
-                ChannelMeters(levels: levels, height: Self.height)
+                ChannelMeters(levels: levels, muted: muted,
+                              onToggleMute: onToggleMute, onSolo: onSolo,
+                              height: Self.height)
                     .frame(maxWidth: .infinity, alignment: .leading)
             case .waveform:
                 WaveformView(samples: samples)
