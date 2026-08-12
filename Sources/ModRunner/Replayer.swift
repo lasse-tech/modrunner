@@ -66,6 +66,12 @@ final class Replayer {
         var loopCount: Int = 0
         var pendingNote: MMDModule.Note? = nil
 
+        /// Volume actually applied by the mixer. It chases `volume` over a
+        /// millisecond or so: stepping the gain instantly on a note or a set
+        /// volume puts a discontinuity in the waveform, which is heard as a
+        /// click. Real hardware had the same edge; players smooth it.
+        var rampedVolume: Float = 0
+
         /// Peak level since the last UI poll, for the VU meters.
         var meter: Float = 0
     }
@@ -114,7 +120,8 @@ final class Replayer {
     private var pendingPositionJump: Int? = nil
     private var pendingLineBreak: Int? = nil
     private var pendingLoopLine: Int? = nil     // 0x16
-    private var lineRepeatsRemaining = 0        // 0x1E
+    private var lineRepeatsRemaining = 0        // 0x1E / ProTracker EEx
+    private var repeatingLine = false
     private var songEnded = false
 
     private var playing = false
@@ -226,6 +233,7 @@ final class Replayer {
         pendingLineBreak = nil
         pendingLoopLine = nil
         lineRepeatsRemaining = 0
+        repeatingLine = false
         history.reset()
         recomputeTiming()
     }
@@ -344,9 +352,12 @@ final class Replayer {
             let gainL = isLeft ? near : far
             let gainR = isLeft ? far : near
 
-            let voiceVolume = Float(voices[index].volume) / 64.0
+            let targetVolume = Float(voices[index].volume) / 64.0
                 * Float(voices[index].trackVolume) / 64.0
                 * masterScale
+            // Reach the target in about a millisecond.
+            let rampStep = Float(1.0 / (sampleRate * 0.001))
+            var rampedVolume = voices[index].rampedVolume
             var peak: Float = 0
 
             voices[index].sampleData.withUnsafeBufferPointer { samples in
@@ -391,7 +402,13 @@ final class Replayer {
                     let a = -0.5 * p0 + 1.5 * p1 - 1.5 * p2 + 0.5 * p3
                     let b = p0 - 2.5 * p1 + 2.0 * p2 - 0.5 * p3
                     let c = -0.5 * p0 + 0.5 * p2
-                    let value = (((a * frac + b) * frac + c) * frac + p1) * voiceVolume
+
+                    if rampedVolume < targetVolume {
+                        rampedVolume = min(targetVolume, rampedVolume + rampStep)
+                    } else if rampedVolume > targetVolume {
+                        rampedVolume = max(targetVolume, rampedVolume - rampStep)
+                    }
+                    let value = (((a * frac + b) * frac + c) * frac + p1) * rampedVolume
 
                     left[frame] += value * gainL
                     right[frame] += value * gainR
@@ -402,6 +419,7 @@ final class Replayer {
                     frame += 1
                 }
                 voices[index].position = position
+                voices[index].rampedVolume = rampedVolume
             }
 
             if peak > voices[index].meter { voices[index].meter = peak }
@@ -424,7 +442,9 @@ final class Replayer {
 
     private func processTick() {
         if tick == 0 {
-            processLine()
+            // While a line is being repeated — ProTracker's EEx pattern delay,
+            // MED's 1E — the commands run again but the notes do not retrigger.
+            processLine(retriggeringNotes: !repeatingLine)
         }
         processEffects()
 
@@ -440,8 +460,10 @@ final class Replayer {
         // playback moves on.
         if lineRepeatsRemaining > 0 {
             lineRepeatsRemaining -= 1
+            repeatingLine = true
             return
         }
+        repeatingLine = false
 
         linesPlayed += 1
 
@@ -492,13 +514,17 @@ final class Replayer {
         module.blocks.indices.contains(currentBlockIndex) ? module.blocks[currentBlockIndex].lines : 64
     }
 
-    private func processLine() {
+    private func processLine(retriggeringNotes: Bool = true) {
         guard module.blocks.indices.contains(currentBlockIndex) else { return }
         let block = module.blocks[currentBlockIndex]
 
         for track in 0..<min(block.tracks, voices.count) {
             let note = block.note(line: currentLine, track: track)
-            startNote(note, on: track)
+            if retriggeringNotes {
+                startNote(note, on: track)
+            } else {
+                applyLineEffect(note, on: track, triggeredNote: false)
+            }
         }
     }
 
@@ -736,7 +762,11 @@ final class Replayer {
             pendingLineBreak = param
 
         case 0x1E:
-            if param > 0, lineRepeatsRemaining == 0 { lineRepeatsRemaining = param }
+            // As with ProTracker's EEx: only arm on the first pass, never on a
+            // repeat, or the line never finishes.
+            if param > 0, !repeatingLine, lineRepeatsRemaining == 0 {
+                lineRepeatsRemaining = param
+            }
 
         case 0x0F:
             switch param {
@@ -790,8 +820,10 @@ final class Replayer {
             if lo > 0 { voice.tremoloDepth = lo }
 
         case 0x09:
-            // Sample offset, in units of 256 bytes.
-            if param > 0, !voice.sampleData.isEmpty {
+            // Sample offset, in units of 256 bytes. ProTracker applies it only
+            // when the row actually plays a note; applying it to a bare command
+            // would jump the read position mid-sample and click.
+            if param > 0, note.note > 0, !voice.sampleData.isEmpty {
                 let offset = param * 256
                 voice.position = offset < voice.sampleData.count ? Double(offset) : 0
             }
@@ -861,13 +893,16 @@ final class Replayer {
             voice.volume = max(0, voice.volume - value)
         case 0xC:
             if value < ticksPerLine { voice.cutAtTick = value }
-        case 0xD:
-            if value > 0 {
-                voice.noteDelayTicks = value
-                voice.pendingNote = nil     // set by startNote when it applies
-            }
+        // ED note delay is set up in startNote, which has to hold the note back
+        // before it is triggered. Handling it again here would clear the pending
+        // note and the delayed note would never sound at all.
         case 0xE:
-            if value > 0, lineRepeatsRemaining == 0 { lineRepeatsRemaining = value }
+            // Pattern delay. It must not re-arm while the line is being
+            // repeated, or reading the same command again on each pass holds
+            // playback on that row for ever.
+            if value > 0, !repeatingLine, lineRepeatsRemaining == 0 {
+                lineRepeatsRemaining = value
+            }
         default:
             // Filter, glissando, waveform selects and invert loop have no effect
             // on this mixer.

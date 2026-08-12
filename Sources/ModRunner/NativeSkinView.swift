@@ -37,8 +37,7 @@ struct NativeSkinView: View {
         }
         .padding(18)
         .frame(width: NativeSkinView.windowWidth,
-               height: NativeSkinView.windowHeight(showingTracker: showTracker),
-               alignment: .top)
+               height: NativeSkinView.windowHeight(showingTracker: showTracker))
         .background(.background)
         .overlay {
             if isDropTarget {
@@ -104,7 +103,6 @@ struct NativeSkinView: View {
             VisualizerView(style: visualizer,
                            levels: model.snapshot.channelMeters,
                            samples: model.waveform)
-                .frame(width: visualizer == .waveform ? 250 : nil)
 
             VStack(alignment: .leading, spacing: 6) {
                 stat("Position", positionText)
@@ -205,7 +203,7 @@ struct NativeSkinView: View {
                     }
                 }
             }
-            .frame(height: 92)
+            .frame(maxHeight: .infinity)
             .background {
                 RoundedRectangle(cornerRadius: 8).fill(.quaternary.opacity(0.5))
             }

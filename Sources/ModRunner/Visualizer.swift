@@ -40,16 +40,22 @@ struct VisualizerView: View {
     let levels: [Float]
     let samples: [Float]
 
+    /// Both visualisations occupy exactly this box. If they differed, switching
+    /// between them would shift everything below in the window.
     static let height: CGFloat = 96
+    static let width: CGFloat = 250
 
     var body: some View {
-        switch style {
-        case .bars:
-            ChannelMeters(levels: levels, height: Self.height)
-        case .waveform:
-            WaveformView(samples: samples)
-                .frame(height: Self.height)
+        Group {
+            switch style {
+            case .bars:
+                ChannelMeters(levels: levels, height: Self.height)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            case .waveform:
+                WaveformView(samples: samples)
+            }
         }
+        .frame(width: Self.width, height: Self.height, alignment: .bottom)
     }
 }
 

@@ -466,6 +466,81 @@ final class ReplayerTests: XCTestCase {
         XCTAssertTrue(snap.isPlaying)
     }
 
+    /// Traces playback position over time. Set MED_TRACE to a module path.
+    func testTracePlayback() throws {
+        let path = ProcessInfo.processInfo.environment["MED_TRACE"] ?? ""
+        try XCTSkipIf(path.isEmpty, "Set MED_TRACE=<module path>")
+
+        let module = try ModuleLoader.load(url: URL(fileURLWithPath: path))
+        let replayer = Replayer()
+        replayer.prepare(sampleRate: 44_100)
+        replayer.load(module: module)
+        replayer.play()
+
+        var left = [Float](repeating: 0, count: 4410)
+        var right = [Float](repeating: 0, count: 4410)
+        var lastPosition = -1
+        for tenth in 0..<2000 {
+            left.withUnsafeMutableBufferPointer { l in
+                right.withUnsafeMutableBufferPointer { r in
+                    replayer.render(left: l.baseAddress!, right: r.baseAddress!, frames: 4410)
+                }
+            }
+            let peak = zip(left, right).map { max(abs($0), abs($1)) }.max() ?? 0
+            let snap = replayer.snapshot()
+            if snap.sequencePosition != lastPosition || !snap.isPlaying {
+                print(String(format: "TRACE t=%.1fs pos=%d/%d block=%d line=%d tpl=%d tempo=%d peak=%.3f playing=%@ ended=%@",
+                             Double(tenth) / 10.0, snap.sequencePosition,
+                             module.playSequence.count, snap.block, snap.line,
+                             snap.ticksPerLine, snap.tempo, peak,
+                             snap.isPlaying ? "yes" : "NO", snap.hasEnded ? "YES" : "no"))
+                lastPosition = snap.sequencePosition
+            }
+            if !snap.isPlaying { break }
+        }
+    }
+
+    /// Renders every module in a directory, for batch comparison against a
+    /// reference player. Set MED_BATCH_DIR and MED_BATCH_OUT.
+    func testExportBatch() throws {
+        let input = ProcessInfo.processInfo.environment["MED_BATCH_DIR"] ?? ""
+        let output = ProcessInfo.processInfo.environment["MED_BATCH_OUT"] ?? ""
+        try XCTSkipIf(input.isEmpty || output.isEmpty,
+                      "Set MED_BATCH_DIR and MED_BATCH_OUT to render a directory")
+
+        let outputDirectory = URL(fileURLWithPath: output)
+        try FileManager.default.createDirectory(at: outputDirectory,
+                                                withIntermediateDirectories: true)
+
+        let files = try FileManager.default
+            .contentsOfDirectory(at: URL(fileURLWithPath: input),
+                                 includingPropertiesForKeys: nil,
+                                 options: [.skipsHiddenFiles])
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+
+        for file in files {
+            guard ModuleLoader.looksLikeModule(file) else { continue }
+            let module: MMDModule
+            do {
+                module = try ModuleLoader.load(url: file)
+            } catch {
+                print("BATCH FAIL \(file.lastPathComponent): \(error.localizedDescription)")
+                continue
+            }
+
+            let seconds = Double(ProcessInfo.processInfo.environment["MED_SECONDS"] ?? "0") ?? 0
+            let duration = seconds > 0 ? seconds : 240
+            let (left, right) = render(module: module, seconds: duration)
+
+            let name = file.deletingPathExtension().lastPathComponent
+            let out = outputDirectory.appendingPathComponent("\(name).wav")
+            try WAVWriter.write(left: left, right: right, sampleRate: 44_100, to: out)
+            print("BATCH OK \(file.lastPathComponent) -> \(out.lastPathComponent) "
+                  + "[\(module.formatID), \(module.numTracks)ch, "
+                  + "\(module.blocks.count) patterns, \(module.playSequence.count) positions]")
+        }
+    }
+
     /// Writes a WAV next to the test run so playback can be checked by ear.
     func testExportWAVForListening() throws {
         let name = ProcessInfo.processInfo.environment["MED_EXPORT"] ?? ""

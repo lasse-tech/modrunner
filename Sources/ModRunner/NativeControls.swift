@@ -9,18 +9,24 @@ struct ChannelMeters: View {
 
     let levels: [Float]
     var barWidth: CGFloat = 14
+    /// Total height including the channel numbers, so the meters occupy the
+    /// same box as the other visualisations.
     var height: CGFloat = 96
+
+    private static let labelHeight: CGFloat = 12
+    private static let labelSpacing: CGFloat = 5
 
     @State private var peaks: [Float] = []
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 10) {
             ForEach(Array(levels.enumerated()), id: \.offset) { index, level in
-                VStack(spacing: 5) {
+                VStack(spacing: Self.labelSpacing) {
                     bar(level: CGFloat(level), peak: CGFloat(peak(at: index)))
                     Text("\(index + 1)")
                         .font(.system(size: 9, weight: .medium, design: .rounded))
                         .foregroundStyle(.tertiary)
+                        .frame(height: Self.labelHeight)
                 }
             }
         }
@@ -74,7 +80,8 @@ struct ChannelMeters: View {
             .overlay(SegmentGaps(count: 13))
             .clipShape(RoundedRectangle(cornerRadius: 3))
         }
-        .frame(width: barWidth, height: height)
+        .frame(width: barWidth,
+               height: max(10, height - Self.labelHeight - Self.labelSpacing))
     }
 }
 
