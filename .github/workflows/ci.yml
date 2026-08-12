@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: swift --version
+
+      - name: Build
+        run: swift build -c release
+
+      - name: Test
+        run: swift test
+
+      - name: Build app bundle
+        run: Scripts/make-app.sh release
+
+      - name: Upload app bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: ModRunner.app
+          path: build/ModRunner.app

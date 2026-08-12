@@ -1,0 +1,13 @@
+# Normalise line endings for text we maintain.
+*.swift   text eol=lf
+*.md      text eol=lf
+*.yml     text eol=lf
+Makefile  text eol=lf
+*.sh      text eol=lf
+
+# Amiga-era documents and modules are historical artefacts — never touch them.
+docs/*.txt      -text
+Examples/*.med  binary
+
+# Keep vendored reference source out of language statistics and diffs.
+docs/openmpt_*.cpp linguist-vendored
