@@ -130,20 +130,27 @@ final class Replayer {
 
     /// How far ahead of the speakers rendering runs. Everything the interface
     /// reads is delayed by this much, so the display matches what is heard.
-    private var outputLatencySamples: Double = 0
+    /// Held in seconds, not samples: switching output device can change the
+    /// sample rate, and a figure in samples would silently mean something else
+    /// afterwards.
+    private var outputLatencySeconds: Double = 0
+
+    private var outputLatencySamples: Double { outputLatencySeconds * sampleRate }
 
     private let history = PlaybackHistory()
 
     /// Reported by the audio device; see PlaybackHistory for why it matters.
     func setOutputLatency(seconds: Double) {
         lock.lock(); defer { lock.unlock() }
-        outputLatencySamples = max(0, seconds) * sampleRate
+        outputLatencySeconds = max(0, seconds)
     }
 
     // MARK: - Lifecycle
 
     func prepare(sampleRate: Double) {
         lock.lock(); defer { lock.unlock() }
+        // The history is measured in frames, so a rate change invalidates it.
+        if sampleRate != self.sampleRate { history.reset() }
         self.sampleRate = sampleRate
         recomputeTiming()
     }
@@ -870,7 +877,7 @@ final class Replayer {
         snap.isPlaying = playing
         snap.hasEnded = songEnded
         snap.beatsPerMinute = beatsPerMinuteLocked()
-        snap.outputLatency = outputLatencySamples / sampleRate
+        snap.outputLatency = outputLatencySeconds
         snap.channelInstruments = voices.map(\.instrument)
         snap.channelNotes = voices.map { $0.isActive ? $0.period : 0 }
 

@@ -213,6 +213,40 @@ final class ReplayerTests: XCTestCase {
         XCTAssertGreaterThan(delayed, 0, "the delayed position should still be usable")
     }
 
+    /// Changing the output device can change the hardware sample rate with it.
+    /// The latency is held in seconds for that reason — as a sample count it
+    /// would quietly come to mean something else after the switch.
+    func testLatencySurvivesASampleRateChange() throws {
+        let url = moduleURL("Happy Hour")
+        try skipIfMissing(url)
+        let module = try MMDLoader.load(url: url)
+
+        let replayer = Replayer()
+        replayer.prepare(sampleRate: 44_100)
+        replayer.load(module: module)
+        replayer.setOutputLatency(seconds: 0.25)
+        XCTAssertEqual(replayer.snapshot().outputLatency, 0.25, accuracy: 0.001)
+
+        // As if the user had moved from a 44.1 kHz device to a 48 kHz one.
+        replayer.prepare(sampleRate: 48_000)
+        XCTAssertEqual(replayer.snapshot().outputLatency, 0.25, accuracy: 0.001,
+                       "latency must still mean a quarter of a second at the new rate")
+
+        // And the delayed readout must still be a quarter second behind.
+        replayer.play()
+        var left = [Float](repeating: 0, count: 512)
+        var right = [Float](repeating: 0, count: 512)
+        for _ in 0..<(48_000 / 512 * 5) {
+            left.withUnsafeMutableBufferPointer { l in
+                right.withUnsafeMutableBufferPointer { r in
+                    replayer.render(left: l.baseAddress!, right: r.baseAddress!, frames: 512)
+                }
+            }
+        }
+        let snap = replayer.snapshot()
+        XCTAssertEqual(snap.elapsedSeconds, 5.0 - 0.25, accuracy: 0.15)
+    }
+
     func testWaveformFollowsTheDelayedOutput() throws {
         let url = moduleURL("Happy Hour")
         try skipIfMissing(url)

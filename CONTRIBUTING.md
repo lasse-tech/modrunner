@@ -39,6 +39,28 @@ most process:
 3. **Add a test.** `Tests/ModRunnerTests` renders offline, so playback can be
    asserted without an audio device.
 
+## Diagnostics
+
+Window and audio behaviour is awkward to judge by eye, so the app can report
+what it is actually doing. Set these when running the binary directly:
+
+| Variable | What it does |
+|---|---|
+| `MODRUNNER_PRINT_WINDOW_ID=1` | Prints the window id and frame, then every two seconds the chrome state: skin, style mask, whether a system title bar is layered over the content, origin, button visibility |
+| `MODRUNNER_AUDIO_DEBUG=1` | Prints sample rate, device presentation latency, buffer latency and the total the display compensates for; also logs configuration changes |
+| `MODRUNNER_SIMULATE_DEVICE_CHANGE=1` | Posts a synthetic engine configuration change three seconds after start, to exercise the device-switch path without taking over the machine's audio output |
+
+```sh
+MODRUNNER_AUDIO_DEBUG=1 ./build/ModRunner.app/Contents/MacOS/ModRunner "Examples/Happy Hour.med"
+```
+
+Views render offscreen rather than being screenshotted, which keeps verification
+out of the way of whatever else is on screen:
+
+```sh
+MED_SNAPSHOT=/tmp/shots swift test --filter SnapshotTests
+```
+
 ## Style
 
 Match what is already there: descriptive names, comments that explain *why* and
