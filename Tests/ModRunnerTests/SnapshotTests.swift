@@ -1,6 +1,6 @@
 import XCTest
 import SwiftUI
-@testable import ModRunner
+@testable import ModRunnerApp
 @testable import ModRunnerKit
 
 /// Renders the interface offscreen, so layout can be inspected without opening

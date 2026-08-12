@@ -1,5 +1,5 @@
 import XCTest
-@testable import ModRunner
+@testable import ModRunnerApp
 @testable import ModRunnerKit
 
 /// The interface is offered in English and German. A missing key does not fail

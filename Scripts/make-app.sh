@@ -10,8 +10,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="$ROOT/build/ModRunner.app"
 
 cd "$ROOT"
-swift build -c "$CONFIG"
-BIN="$(swift build -c "$CONFIG" --show-bin-path)/ModRunner"
+swift build -c "$CONFIG" --product ModRunnerApp
+BIN="$(swift build -c "$CONFIG" --show-bin-path)/ModRunnerApp"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
@@ -20,7 +20,8 @@ cp "$BIN" "$APP/Contents/MacOS/ModRunner"
 # The interface strings live in the SwiftPM resource bundle that Bundle.module
 # resolves. Without it the app traps on the first look-up, so this is not
 # optional.
-BUNDLE="$(swift build -c "$CONFIG" --show-bin-path)/ModRunner_ModRunner.bundle"
+# The strings live in the library target since the split.
+BUNDLE="$(swift build -c "$CONFIG" --show-bin-path)/ModRunner_ModRunnerKit.bundle"
 if [[ -d "$BUNDLE" ]]; then
     cp -R "$BUNDLE" "$APP/Contents/Resources/"
 else

@@ -20,8 +20,12 @@ let package = Package(
             resources: [.process("Resources")],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        // Not "ModRunner": the CLI product is "modrunner", and on a
+        // case-insensitive filesystem the two executables would be the same
+        // file in the build directory — whichever linked last would win, and
+        // running `modrunner` could open the app instead.
         .executableTarget(
-            name: "ModRunner",
+            name: "ModRunnerApp",
             dependencies: ["ModRunnerKit"],
             path: "Sources/ModRunner",
             swiftSettings: [.swiftLanguageMode(.v5)]
@@ -37,7 +41,7 @@ let package = Package(
         ),
         .testTarget(
             name: "ModRunnerTests",
-            dependencies: ["ModRunner", "ModRunnerKit", "ModRunnerCLI"],
+            dependencies: ["ModRunnerApp", "ModRunnerKit", "ModRunnerCLI"],
             path: "Tests/ModRunnerTests",
             swiftSettings: [.swiftLanguageMode(.v5)]
         )
