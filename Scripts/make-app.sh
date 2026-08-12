@@ -31,13 +31,16 @@ fi
 # Shown by the Licences button in the About panel.
 cp "$ROOT/THIRD-PARTY-NOTICES.md" "$APP/Contents/Resources/" 2>/dev/null || true
 
-# App icon from the brand package.
-ICON="$ROOT/brand/macos/ModRunner.icns"
-if [[ -f "$ICON" ]]; then
-    cp "$ICON" "$APP/Contents/Resources/ModRunner.icns"
-else
-    echo "warning: $ICON is missing; the app will fall back to the generic icon" >&2
-fi
+# App icon and the two document icons from the brand package. The document
+# icons are what the Finder puts on .med and .mod files; rebuild them with
+# Scripts/make-doc-icons.swift.
+for icon in ModRunner ModRunnerDocMED ModRunnerDocMOD; do
+    if [[ -f "$ROOT/brand/macos/$icon.icns" ]]; then
+        cp "$ROOT/brand/macos/$icon.icns" "$APP/Contents/Resources/$icon.icns"
+    else
+        echo "warning: brand/macos/$icon.icns is missing; the Finder will fall back to a generic icon" >&2
+    fi
+done
 
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -62,6 +65,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <array>
         <dict>
             <key>CFBundleTypeName</key><string>MED/OctaMED module</string>
+            <key>CFBundleTypeIconFile</key><string>ModRunnerDocMED</string>
             <key>CFBundleTypeRole</key><string>Viewer</string>
             <key>LSHandlerRank</key><string>Owner</string>
             <key>CFBundleTypeExtensions</key>
@@ -71,6 +75,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
         </dict>
         <dict>
             <key>CFBundleTypeName</key><string>ProTracker module</string>
+            <key>CFBundleTypeIconFile</key><string>ModRunnerDocMOD</string>
             <key>CFBundleTypeRole</key><string>Viewer</string>
             <key>LSHandlerRank</key><string>Owner</string>
             <key>CFBundleTypeExtensions</key>
@@ -84,6 +89,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
         <dict>
             <key>UTTypeIdentifier</key><string>de.incudex.modrunner.med</string>
             <key>UTTypeDescription</key><string>MED/OctaMED module</string>
+            <key>UTTypeIconFile</key><string>ModRunnerDocMED</string>
             <key>UTTypeConformsTo</key>
             <array><string>public.data</string><string>public.audio</string></array>
             <key>UTTypeTagSpecification</key>
@@ -95,6 +101,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
         <dict>
             <key>UTTypeIdentifier</key><string>de.incudex.modrunner.mod</string>
             <key>UTTypeDescription</key><string>ProTracker module</string>
+            <key>UTTypeIconFile</key><string>ModRunnerDocMOD</string>
             <key>UTTypeConformsTo</key>
             <array><string>public.data</string><string>public.audio</string></array>
             <key>UTTypeTagSpecification</key>
