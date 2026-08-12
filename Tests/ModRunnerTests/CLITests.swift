@@ -16,12 +16,48 @@ final class CLITests: XCTestCase {
 
     private static let examples = ["Happy Hour", "Magic Noises", "Take it slow", "Terminator II"]
 
-    /// The binary sits next to the test bundle in the build directory.
+    /// Where the built `modrunner` is.
+    ///
+    /// On Apple's platforms it sits next to the test bundle. Elsewhere
+    /// `Bundle(for:)` does not point into the build directory at all, and this
+    /// suite used to skip itself in silence on Linux and Windows — which looks
+    /// exactly like passing. The build directory relative to this file is the
+    /// answer everywhere; `MODRUNNER_BINARY` overrides it for a build that
+    /// puts its products somewhere else.
     private func binary() throws -> URL {
-        let directory = Bundle(for: Self.self).bundleURL.deletingLastPathComponent()
-        let url = directory.appendingPathComponent("modrunner")
-        try XCTSkipUnless(FileManager.default.isExecutableFile(atPath: url.path),
-                          "modrunner has not been built at \(url.path)")
+        var candidates: [URL] = []
+
+        if let override = ProcessInfo.processInfo.environment["MODRUNNER_BINARY"] {
+            candidates.append(URL(fileURLWithPath: override))
+        }
+
+        #if os(Windows)
+        let name = "modrunner.exe"
+        #else
+        let name = "modrunner"
+        #endif
+
+        candidates.append(Bundle(for: Self.self).bundleURL
+            .deletingLastPathComponent()
+            .appendingPathComponent(name))
+
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        for configuration in ["debug", "release"] {
+            candidates.append(root
+                .appendingPathComponent(".build")
+                .appendingPathComponent(configuration)
+                .appendingPathComponent(name))
+        }
+
+        guard let url = candidates.first(where: {
+            FileManager.default.isExecutableFile(atPath: $0.path)
+        }) else {
+            throw XCTSkip("modrunner has not been built; looked in "
+                          + candidates.map(\.path).joined(separator: ", "))
+        }
         return url
     }
 
