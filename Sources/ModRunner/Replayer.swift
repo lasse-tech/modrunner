@@ -365,12 +365,13 @@ final class Replayer {
             let gainL = isLeft ? near : far
             let gainR = isLeft ? far : near
 
-            let targetVolume = Float(voices[index].volume) / 64.0
+            var targetVolume = Float(voices[index].volume) / 64.0
                 * Float(voices[index].trackVolume) / 64.0
                 * masterScale
             // Reach the target in about a millisecond.
             let rampStep = Float(1.0 / (sampleRate * 0.001))
             var rampedVolume = voices[index].rampedVolume
+            var ended = false
             var peak: Float = 0
 
             voices[index].sampleData.withUnsafeBufferPointer { samples in
@@ -388,9 +389,24 @@ final class Replayer {
                             let span = Double(loopEnd - loopStart)
                             position = Double(loopStart) + (position - Double(loopEnd)).truncatingRemainder(dividingBy: span)
                         } else {
-                            voices[index].isActive = false
-                            break
+                            // The sample has run out. Cutting the voice here
+                            // steps the output straight to zero, and these
+                            // samples rarely end at zero — several in these
+                            // modules end near -0.7 of full scale, which is a
+                            // loud click on every note. Hold the last value and
+                            // let the volume ramp take it down instead. On real
+                            // hardware the DMA ran on into the two zero bytes at
+                            // the start of the sample and the output filter did
+                            // the same job.
+                            ended = true
+                            targetVolume = 0
+                            position = Double(max(0, count - 1))
                         }
+                    }
+
+                    if ended, rampedVolume <= 0.0005 {
+                        voices[index].isActive = false
+                        break
                     }
 
                     // Catmull-Rom interpolation. Linear resampling adds audible

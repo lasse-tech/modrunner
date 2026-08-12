@@ -369,6 +369,51 @@ final class ReplayerTests: XCTestCase {
         }
     }
 
+    /// A one-shot sample that ends on a large value must not be cut off there.
+    /// Several samples in these modules end near -0.7 of full scale, and
+    /// dropping the voice at that point steps the output straight to zero — a
+    /// click on every single note.
+    func testSampleEndDoesNotClick() throws {
+        var module = MMDModule()
+        module.numTracks = 4
+        module.ticksPerLine = 6
+        module.defaultTempo = 33
+        module.trackVolumes = Array(repeating: 64, count: 16)
+
+        // A steady tone that stops abruptly at a large negative value, which is
+        // the shape that gave the click.
+        var instrument = MMDModule.Instrument()
+        let length = 512
+        instrument.data = (0..<length).map { _ in Float(-92) / 128.0 }
+        instrument.volume = 64
+        instrument.repeatStart = 0
+        instrument.repeatLength = 2      // ProTracker's "no loop"
+        module.instruments = [instrument]
+        XCTAssertFalse(instrument.isLooping)
+
+        var block = MMDModule.Block()
+        block.tracks = 4
+        block.lines = 64
+        var notes = [MMDModule.Note](repeating: MMDModule.Note(), count: 4 * 64)
+        notes[0] = MMDModule.Note(note: 13, instrument: 1, command: 0, data: 0)
+        block.notes = notes
+        module.blocks = [block]
+        module.playSequence = [0]
+
+        let (left, _) = render(module: module, seconds: 1)
+
+        var largestStep: Float = 0
+        var previous = left[0]
+        for i in 1..<left.count {
+            largestStep = max(largestStep, abs(left[i] - previous))
+            previous = left[i]
+        }
+        let peak = left.map(abs).max() ?? 0
+        XCTAssertGreaterThan(peak, 0.05, "the test tone did not play")
+        XCTAssertLessThan(largestStep, peak * 0.1,
+                          "step of \(largestStep) against a peak of \(peak) — the sample end clicks")
+    }
+
     func testWaveformFollowsTheDelayedOutput() throws {
         let url = moduleURL("Happy Hour")
         try skipIfMissing(url)
@@ -652,6 +697,27 @@ final class ReplayerTests: XCTestCase {
             try WAVWriter.write(left: l, right: r, sampleRate: 44_100,
                                 to: directory.appendingPathComponent("var_\(name).wav"))
             print("VARIANT \(name) written")
+        }
+    }
+
+    /// Dumps a checksum of every loaded sample, to compare the loader's idea of
+    /// where the sample data lives against an independent extraction.
+    func testDumpSampleChecksums() throws {
+        let path = ProcessInfo.processInfo.environment["MED_DUMPSAMPLES"] ?? ""
+        try XCTSkipIf(path.isEmpty, "Set MED_DUMPSAMPLES=<module path>")
+
+        let module = try ModuleLoader.load(url: URL(fileURLWithPath: path))
+        for (index, instrument) in module.instruments.enumerated() where !instrument.data.isEmpty {
+            // Back to the stored bytes, so the checksum can be compared directly.
+            var sum = 0
+            for value in instrument.data {
+                sum = (sum + Int(value * 128.0) & 0xFF) & 0xFFFFFF
+            }
+            print(String(format: "SAMPLE %2d len=%6d sum=%08X first=%4d last=%4d vol=%2d ft=%2d rep=%6d replen=%6d",
+                         index + 1, instrument.data.count, sum,
+                         Int(instrument.data.first! * 128), Int(instrument.data.last! * 128),
+                         instrument.volume, instrument.finetune,
+                         instrument.repeatStart, instrument.repeatLength))
         }
     }
 
