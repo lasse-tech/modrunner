@@ -1,3 +1,9 @@
+// Live output is the one place in the engine that reaches for an Apple
+// framework. Everything else here — loader, replayer, filter, WAV writer —
+// is Foundation only, so guarding this file is what lets the engine and the
+// command line build on Linux and Windows. Those platforms need a backend of
+// their own before `play` can do anything; `render` never touched this.
+#if canImport(AVFoundation)
 import AVFoundation
 
 /// Pulls audio from the replayer on the render thread, and keeps the replayer
@@ -192,3 +198,5 @@ public final class AudioOutput {
         reportLatency()
     }
 }
+
+#endif

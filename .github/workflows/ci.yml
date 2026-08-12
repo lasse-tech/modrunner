@@ -30,6 +30,38 @@ jobs:
           name: ModRunner.app
           path: build/ModRunner.app
 
+  # The engine and the command line are Foundation and nothing else — the one
+  # Apple framework in the library, AVFoundation, is confined to AudioOutput.
+  # This job is what keeps that true: the app itself is macOS-only and is not
+  # built here, but everything under it has to compile and pass its tests on
+  # Linux and Windows.
+  portable:
+    name: Engine and CLI on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.0"
+
+      - name: Show toolchain
+        run: swift --version
+
+      - name: Build the engine and the command line
+        run: swift build -c release --product modrunner
+
+      - name: Test
+        # The snapshot suite is macOS-only and stands itself down; the loader,
+        # replayer, localisation and CLI suites run here in full.
+        run: swift test
+
   lint:
     runs-on: macos-latest
 

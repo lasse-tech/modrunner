@@ -1,3 +1,6 @@
+// Rendering the interface needs SwiftUI and AppKit, so this suite is
+// macOS-only; the loader, replayer and CLI suites run everywhere.
+#if os(macOS)
 import XCTest
 import SwiftUI
 @testable import ModRunnerApp
@@ -223,3 +226,4 @@ final class SnapshotTests: XCTestCase {
         try write(view, to: directory.appendingPathComponent("meters-native.png"))
     }
 }
+#endif

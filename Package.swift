@@ -41,7 +41,14 @@ let package = Package(
         ),
         .testTarget(
             name: "ModRunnerTests",
-            dependencies: ["ModRunnerApp", "ModRunnerKit", "ModRunnerCLI"],
+            dependencies: [
+                // The interface is SwiftUI and AppKit, so it only exists on
+                // macOS. The loader, replayer, localisation and CLI suites do
+                // not need it and run on every platform the toolchain covers.
+                .target(name: "ModRunnerApp", condition: .when(platforms: [.macOS])),
+                "ModRunnerKit",
+                "ModRunnerCLI"
+            ],
             path: "Tests/ModRunnerTests",
             swiftSettings: [.swiftLanguageMode(.v5)]
         )

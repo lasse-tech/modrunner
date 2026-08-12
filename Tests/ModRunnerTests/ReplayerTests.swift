@@ -1,5 +1,4 @@
 import XCTest
-@testable import ModRunnerApp
 @testable import ModRunnerKit
 
 /// These tests render the modules offline so playback can be checked without
