@@ -83,8 +83,7 @@ handling was built and corrected against them.
 
 The manual is marked **"NOT PUBLIC DOMAIN"** and carries no licence permitting
 redistribution, so it is **not included** in this repository. Attribution does
-not substitute for a licence. Obtain it separately; it circulates as
-`OctamedSSManual.lha`, an AmigaGuide document that `bsdtar -xf` will unpack.
+not substitute for a licence.
 
 ---
 
@@ -101,9 +100,8 @@ Upstream: <https://xmp.sourceforge.net/>
 ## Example modules
 
 `Examples/*.med` are compositions by **Lars Gossard** (© 2026 incūdex, Lars
-Gossard), written in 1993 with MED
-V1.30 and originally released as the *Magic Noises* collection under the handle
-"Shayne Ghoosman". They are included by the author. See `Examples/README.md`.
+Gossard), written in 1993 with MED V1.30 and originally released as the *Magic
+Noises* collection. They are included by the author. See `Examples/README.md`.
 
 ---
 

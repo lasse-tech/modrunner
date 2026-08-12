@@ -1,10 +1,12 @@
 # ModRunner
 
+![Unreleased](https://img.shields.io/badge/status-unreleased-EDE6E0?labelColor=231D18)
 ![macOS 13+](https://img.shields.io/badge/macOS-13%2B-17130F?logo=apple&logoColor=white)
 ![Swift 6.0](https://img.shields.io/badge/Swift-6.0-FF6B35?logo=swift&logoColor=white)
-![Licence Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-3B67A2)
 ![No dependencies](https://img.shields.io/badge/dependencies-none-2E7D32)
+![Licence Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-3B67A2)
 ![Formats](https://img.shields.io/badge/formats-MMD0%20%C2%B7%20MMD1%20%C2%B7%20MOD-FFA997?labelColor=17130F)
+![Languages](https://img.shields.io/badge/languages-EN%20%C2%B7%20DE-3B67A2?labelColor=17130F)
 
 A small macOS player for Amiga tracker modules — MED, OctaMED and ProTracker —
 from the late eighties and early nineties, presented in the style of the
@@ -27,15 +29,26 @@ AmigaOS 3.x Workbench interface.
   ProTracker-style vibrato, set finetune, line loop, cut note, sample start
   offset, jump to next sequence entry, replay line, note delay and retrigger
 - Playlist with drag & drop; drop a single module or a whole drawer
-- **Two interfaces**, switchable at any time from the View menu (⌘1 / ⌘2). They
-  share the model and the replayer, so switching mid-song changes nothing you
-  hear:
+- **Two interfaces**, switchable at any time from the View menu (⌘1 / ⌘2) or the
+  buttons in the window itself. They share the model and the replayer, so
+  switching mid-song changes nothing you hear:
   - **Native** — system materials and typography, SF Symbols, the ModRunner
     palette, a continuously scrolling tracker and animated level meters
   - **Workbench** — the AmigaOS 3.x re-creation, chunky and discrete on purpose
 - Tracker view: the note data of the current block moving under a fixed
   playhead, in OctaMED's notation, with beat lines marked — toggle it with the
   **Tracks** button or ⌘T, and the window resizes to match
+- **Full-screen player** (⌃⌘F, or the green window gadget) — the pattern as big
+  as the display allows, scrolling under a fixed playhead, with the information
+  strips fading away while the mouse is still. Esc leaves, space plays, ←/→ move
+  by position.
+- **Mini player** (⌃⌘M) — a floating strip that stays above other windows while
+  you work
+- Both follow whichever interface is selected, in the same two styles
+- **Recently played**, in the File menu — recorded when a module is actually
+  played, not when a folder of them is loaded
+- **English and German**, following the system language unless told otherwise in
+  Settings (⌘,)
 - Per-voice level meters with mute and solo, song position scrubbing,
   transport, volume
 - The Amiga output filter, switchable (⌘F). An A500 put a fixed RC stage and a
@@ -117,8 +130,7 @@ Appendix A and B of the *OctaMED SoundStudio V1.03c Manual* (© RBF Software
 effect handling here was built and corrected against.
 
 That manual is marked **"NOT PUBLIC DOMAIN"** and is therefore deliberately not
-included in this repository — obtain it separately (it circulates as
-`OctamedSSManual.lha`, an AmigaGuide document; `bsdtar -xf` unpacks it).
+included in this repository.
 
 The tempo conversion was cross-checked against OpenMPT's `soundlib/Load_med.cpp`
 (BSD-3-Clause, not vendored here — see

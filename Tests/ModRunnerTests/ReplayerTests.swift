@@ -60,11 +60,19 @@ final class ReplayerTests: XCTestCase {
         }
     }
 
+    /// The annotation is a separate block from the song name, reached through
+    /// its own header pointer, so a loader that reads neither and a loader that
+    /// reads only the name both have to fail here. Asserted by shape rather
+    /// than by quoting the text: it is the module's own 1993 content.
     func testAnnotationIsRead() throws {
         let url = moduleURL("Happy Hour")
         try skipIfMissing(url)
         let module = try MMDLoader.load(url: url)
-        XCTAssertTrue(module.annotation.contains("Shayne Ghoosman"), "annotation was: \(module.annotation)")
+
+        XCTAssertTrue(module.annotation.hasPrefix(module.songName),
+                      "annotation was: \(module.annotation)")
+        XCTAssertGreaterThan(module.annotation.count, module.songName.count + 8,
+                             "annotation carries more than the song name")
     }
 
     func testRejectsNonModule() {

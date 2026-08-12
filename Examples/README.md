@@ -15,8 +15,8 @@ All four are 4-channel MMD0, tempo 33 at 6 ticks per line (125 BPM).
 ## Authorship
 
 These are compositions by **Lars Gossard**, written in 1993 with MED V1.30 and
-originally released as the *Magic Noises* collection under the handle "Shayne
-Ghoosman". They are included here by the author.
+originally released as the *Magic Noises* collection. They are included here by
+the author.
 
 They are **not** covered by the Apache-2.0 licence that applies to the source
 code. The collection's original terms were: freely distributable, provided no
