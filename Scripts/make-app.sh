@@ -3,11 +3,22 @@
 #
 #   Scripts/make-app.sh [debug|release]
 #
+# Environment:
+#   VERSION       marketing version for CFBundleShortVersionString (default 0.0.0)
+#   BUILD         build number for CFBundleVersion (default: commits on HEAD)
+#   SIGN_IDENTITY a codesigning identity; with one set the bundle is signed for
+#                 distribution — hardened runtime and a secure timestamp, both
+#                 of which notarisation requires. Without one the bundle gets an
+#                 ad-hoc signature, which is enough to launch it locally.
+#
 set -euo pipefail
 
 CONFIG="${1:-release}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="$ROOT/build/ModRunner.app"
+VERSION="${VERSION:-0.0.0}"
+BUILD="${BUILD:-$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo 1)}"
+SIGN_IDENTITY="${SIGN_IDENTITY:-}"
 
 cd "$ROOT"
 swift build -c "$CONFIG" --product ModRunnerApp
@@ -43,7 +54,7 @@ for icon in ModRunner ModRunnerDocMED ModRunnerDocMOD; do
     fi
 done
 
-cat > "$APP/Contents/Info.plist" <<'PLIST'
+cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -57,9 +68,11 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>CFBundleExecutable</key><string>ModRunner</string>
     <key>CFBundleIconFile</key><string>ModRunner</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>1.0</string>
-    <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleShortVersionString</key><string>$VERSION</string>
+    <key>CFBundleVersion</key><string>$BUILD</string>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
+    <key>LSApplicationCategoryType</key><string>public.app-category.music</string>
+    <key>NSHumanReadableCopyright</key><string>Copyright © Lars Gossard. Apache-2.0.</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>CFBundleDocumentTypes</key>
@@ -119,7 +132,16 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-# Ad-hoc signature so macOS will launch it without a developer certificate.
-codesign --force --sign - "$APP" 2>/dev/null || true
+if [[ -n "$SIGN_IDENTITY" ]]; then
+    # For distribution. The hardened runtime and a timestamp from Apple's
+    # server are both preconditions for notarisation; without them the
+    # submission comes back rejected rather than failing here.
+    codesign --force --options runtime --timestamp \
+        --sign "$SIGN_IDENTITY" "$APP"
+    codesign --verify --strict --verbose=2 "$APP"
+else
+    # Ad-hoc signature so macOS will launch it without a developer certificate.
+    codesign --force --sign - "$APP" 2>/dev/null || true
+fi
 
-echo "Built $APP"
+echo "Built $APP ($VERSION build $BUILD)"

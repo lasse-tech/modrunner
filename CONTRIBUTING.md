@@ -75,6 +75,36 @@ every push. The rules in `.swiftlint.yml` are tuned for a playroutine: short DSP
 variable names, hand-aligned period tables and long effect switches are all
 fine. `make lint-fix` applies the corrections SwiftLint can make on its own.
 
+## Releasing
+
+Releases are built on a machine that holds the Developer ID certificate, not in
+CI. Once per machine, store the notary credentials — your Apple ID, the team id
+and an app-specific password from appleid.apple.com, *not* the Apple ID
+password:
+
+```sh
+make notary-setup
+```
+
+Then, with the changelog's `## [Unreleased]` section renamed to the version
+being released and everything committed:
+
+```sh
+make release VERSION=1.0.0
+```
+
+That builds `ModRunner.app` signed with the Developer ID certificate and the
+hardened runtime, packs it into `build/ModRunner-1.0.0.dmg` next to an
+`/Applications` alias, signs the image, sends it to Apple's notary service,
+staples the ticket, tags `v1.0.0` and creates a **draft** GitHub release whose
+notes are the changelog section for that version. Look at the draft, then
+publish it from the release page. `DRAFT=0` skips the draft step.
+
+The steps are available on their own — `make signed-app`, `make dmg` — and
+`make dmg` with `NOTARY_PROFILE=` set to nothing builds and signs the image
+without involving Apple, which is the quick way to check a packaging change.
+`make app` still produces the ad-hoc signed bundle for everyday development.
+
 ## Licensing of contributions
 
 Contributions are accepted under the Apache License 2.0, the same licence the

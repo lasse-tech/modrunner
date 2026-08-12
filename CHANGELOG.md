@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-12
+
 ### Added
 
 - MMD0 and MMD1 loader, following the pointer discipline the format

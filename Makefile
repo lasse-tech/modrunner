@@ -19,8 +19,16 @@ SECONDS     ?= 30
 # Destination for `make export`.
 WAV         ?= build/export.wav
 
+# Release settings. VERSION names the disk image and the tag; it has no default
+# on purpose, since a release built as 0.0.0 is a release nobody wants.
+VERSION        ?=
+SIGN_IDENTITY  ?= Developer ID Application: Lars Gossard (ZPY7FC8GVK)
+NOTARY_PROFILE ?= modrunner
+DRAFT          ?= 1
+DMG            := build/ModRunner-$(VERSION).dmg
+
 .DEFAULT_GOAL := help
-.PHONY: help build app run install uninstall associate associations test check export cli info render icons lint lint-fix fmt clean clear distclean
+.PHONY: help build app run install uninstall associate associations test check export cli info render icons lint lint-fix fmt clean clear distclean signed-app dmg release notary-setup
 
 ## help: Show this list of targets
 help:
@@ -34,6 +42,8 @@ help:
 	@echo "  CONFIG=$(CONFIG)            debug | release"
 	@echo "  INSTALL_DIR=$(INSTALL_DIR)"
 	@echo "  MODULE=$(MODULE)"
+	@echo "  VERSION=$(VERSION)              required by signed-app, dmg and release"
+	@echo "  DRAFT=$(DRAFT)                  1 keeps the GitHub release a draft"
 
 ## build: Compile the executable
 build:
@@ -93,6 +103,35 @@ render: cli
 	@mkdir -p "$$(dirname "$(WAV)")"
 	@"$$(swift build -c $(CONFIG) --show-bin-path)/modrunner" render "$(MODULE)" -o "$(WAV)" \
 		$(if $(SECONDS),--seconds $(SECONDS),)
+
+## notary-setup: Store the Apple credentials the notary service needs, once
+notary-setup:
+	@echo "Storing a keychain profile called '$(NOTARY_PROFILE)'."
+	@echo "You need your Apple ID, the team id ZPY7FC8GVK, and an app-specific"
+	@echo "password from appleid.apple.com (Sign-In and Security > App-Specific"
+	@echo "Passwords) — not your normal Apple ID password."
+	@echo
+	xcrun notarytool store-credentials "$(NOTARY_PROFILE)" --team-id ZPY7FC8GVK
+
+## signed-app: Build the app bundle signed with the Developer ID certificate
+signed-app: require-version
+	VERSION="$(VERSION)" SIGN_IDENTITY="$(SIGN_IDENTITY)" Scripts/make-app.sh release
+
+## dmg: Build, sign and notarise the disk image
+dmg: signed-app
+	VERSION="$(VERSION)" SIGN_IDENTITY="$(SIGN_IDENTITY)" \
+	NOTARY_PROFILE="$(NOTARY_PROFILE)" Scripts/make-dmg.sh
+
+## release: Tag the version and publish the disk image on GitHub
+release: dmg
+	VERSION="$(VERSION)" DRAFT="$(DRAFT)" Scripts/make-release.sh
+
+.PHONY: require-version
+require-version:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "error: set VERSION, as in: make release VERSION=1.0.0" >&2; \
+		exit 1; \
+	fi
 
 ## icons: Rebuild the Finder icons for .med and .mod
 icons:

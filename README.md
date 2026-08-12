@@ -1,6 +1,6 @@
 # ModRunner
 
-![Unreleased](https://img.shields.io/badge/status-unreleased-EDE6E0?labelColor=231D18)
+[![Release](https://img.shields.io/github/v/release/lasse-tech/modrunner?label=download&color=EDE6E0&labelColor=231D18)](https://github.com/lasse-tech/modrunner/releases/latest)
 ![macOS 13+](https://img.shields.io/badge/macOS-13%2B-17130F?logo=apple&logoColor=white)
 ![Swift 6.0](https://img.shields.io/badge/Swift-6.0-FF6B35?logo=swift&logoColor=white)
 ![No dependencies](https://img.shields.io/badge/dependencies-none-2E7D32)
@@ -59,6 +59,14 @@ AmigaOS 3.x Workbench interface.
 
 Synthetic and hybrid instruments are parsed but stay silent — they need OctaMED's
 waveform sequencer, which is not implemented. MIDI instruments are silent too.
+
+## Install
+
+Download the disk image from the
+[latest release](https://github.com/lasse-tech/modrunner/releases/latest), open
+it and drag ModRunner into your Applications folder. The app is signed with a
+Developer ID certificate and notarised by Apple, so it opens on first
+double-click — no right-click-Open, no trip through System Settings.
 
 ## Build and run
 
