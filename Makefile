@@ -19,7 +19,7 @@ SECONDS     ?= 30
 WAV         ?= build/export.wav
 
 .DEFAULT_GOAL := help
-.PHONY: help build app run install uninstall associate associations test check export fmt clean clear distclean
+.PHONY: help build app run install uninstall associate associations test check export lint lint-fix fmt clean clear distclean
 
 ## help: Show this list of targets
 help:
@@ -74,8 +74,8 @@ uninstall:
 test:
 	swift test
 
-## check: Build and test in one go, as CI does
-check: build test
+## check: Build, test and lint in one go, as CI does
+check: build test lint
 
 ## export: Render a module to a WAV file for listening
 export:
@@ -85,6 +85,22 @@ export:
 	MED_OUT="$(WAV)" \
 	swift test --filter testExportWAVForListening
 	@echo "Wrote $(WAV)"
+
+## lint: Check the sources with SwiftLint, if it is installed
+lint:
+	@if command -v swiftlint >/dev/null 2>&1; then \
+		swiftlint lint --quiet; \
+	else \
+		echo "SwiftLint is not installed (brew install swiftlint); skipping."; \
+	fi
+
+## lint-fix: Apply the corrections SwiftLint can make on its own
+lint-fix:
+	@if command -v swiftlint >/dev/null 2>&1; then \
+		swiftlint --fix --quiet && swiftlint lint --quiet; \
+	else \
+		echo "SwiftLint is not installed (brew install swiftlint); skipping."; \
+	fi
 
 ## fmt: Reformat the sources with swift-format, if it is installed
 fmt:

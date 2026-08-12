@@ -67,6 +67,11 @@ Match what is already there: descriptive names, comments that explain *why* and
 cite the spec where a magic number comes from, no comment restating the code.
 `make fmt` runs swift-format if you have it.
 
+`make lint` runs SwiftLint (`brew install swiftlint`), and CI does the same on
+every push. The rules in `.swiftlint.yml` are tuned for a playroutine: short DSP
+variable names, hand-aligned period tables and long effect switches are all
+fine. `make lint-fix` applies the corrections SwiftLint can make on its own.
+
 ## Licensing of contributions
 
 Contributions are accepted under the Apache License 2.0, the same licence the

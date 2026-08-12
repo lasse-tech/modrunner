@@ -79,7 +79,7 @@ final class PlaybackHistory {
         guard count > 0 else { return nil }
         let target = renderedSamples - max(0, delaySamples)
 
-        var best: PlaybackPosition? = nil
+        var best: PlaybackPosition?
         // Walk backwards from the newest entry; the wanted one is usually close.
         for step in 0..<count {
             let index = (writeIndex - 1 - step + positions.count * 2) % positions.count

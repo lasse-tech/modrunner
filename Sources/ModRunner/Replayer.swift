@@ -64,7 +64,7 @@ final class Replayer {
         var cutAtTick: Int = -1          // 0x18
         var loopLine: Int = 0            // 0x16
         var loopCount: Int = 0
-        var pendingNote: MMDModule.Note? = nil
+        var pendingNote: MMDModule.Note?
 
         /// Volume actually applied by the mixer. It chases `volume` over a
         /// millisecond or so: stepping the gain instantly on a note or a set
@@ -117,9 +117,9 @@ final class Replayer {
     private var sequencePosition = 0
     private var currentBlockIndex = 0
 
-    private var pendingPositionJump: Int? = nil
-    private var pendingLineBreak: Int? = nil
-    private var pendingLoopLine: Int? = nil     // 0x16
+    private var pendingPositionJump: Int?
+    private var pendingLineBreak: Int?
+    private var pendingLoopLine: Int?     // 0x16
     private var lineRepeatsRemaining = 0        // 0x1E / ProTracker EEx
     private var repeatingLine = false
     private var songEnded = false

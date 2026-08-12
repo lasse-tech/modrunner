@@ -29,3 +29,17 @@ jobs:
         with:
           name: ModRunner.app
           path: build/ModRunner.app
+
+  lint:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Lint
+        # Violations appear as annotations on the diff. Warnings do not fail
+        # the build; only rules configured with error severity do.
+        run: swiftlint lint --reporter github-actions-logging

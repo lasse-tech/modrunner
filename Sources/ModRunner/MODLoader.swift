@@ -12,8 +12,6 @@ struct MODLoader {
 
     private let bytes: [UInt8]
 
-    private init(bytes: [UInt8]) { self.bytes = bytes }
-
     /// Tags that appear at offset 1080, and the channel count they imply.
     private static let signatures: [String: Int] = [
         "M.K.": 4, "M!K!": 4, "M&K!": 4, "N.T.": 4, "FLT4": 4,

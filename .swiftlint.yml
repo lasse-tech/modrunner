@@ -1,0 +1,66 @@
+# SwiftLint configuration for ModRunner.
+#
+# The replayer is a port of a tracker playroutine, so it keeps the idioms of
+# that world: single-letter loop and DSP variables, hand-aligned period and
+# sine tables, and long switch statements dispatching effect commands. The
+# rules below are relaxed where the default would only fight that style, and
+# left alone everywhere else.
+
+included:
+  - Sources
+  - Tests
+  - Scripts
+
+excluded:
+  - .build
+  - build
+
+disabled_rules:
+  # Aligned literal tables (period/sine tables, test expectations) rely on
+  # padding after commas and colons, and on trailing commas.
+  - comma
+  - colon
+  - trailing_comma
+  # "masterScale" is audio terminology, not a social term.
+  - inclusive_language
+  # Module ids and Amiga sample names are bytes, not UTF-8: the loaders use
+  # `String(decoding:as:)` on purpose and handle the replacement character
+  # themselves, so the failable initializer is not what is wanted here.
+  - optional_data_string_conversion
+
+large_tuple:
+  warning: 3
+  error: 4
+
+identifier_name:
+  min_length:
+    warning: 1
+  max_length:
+    warning: 50
+    error: 60
+
+line_length:
+  warning: 140
+  error: 200
+  ignores_urls: true
+  ignores_comments: true
+
+function_body_length:
+  warning: 100
+  error: 150
+
+cyclomatic_complexity:
+  # Effect dispatch is one big switch; the cases themselves are trivial.
+  ignores_case_statements: true
+  warning: 15
+  error: 25
+
+# Calibrated just above the current replayer and its test suite: they are
+# allowed to stay this size, but not to keep growing unnoticed.
+file_length:
+  warning: 1300
+  error: 1600
+
+type_body_length:
+  warning: 950
+  error: 1200

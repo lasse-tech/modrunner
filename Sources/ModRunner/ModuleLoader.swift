@@ -46,7 +46,7 @@ enum ModuleLoader {
         if ["MMD0", "MMD1", "MMD2", "MMD3"].contains(id) { return true }
 
         // ProTracker's tag sits at 1080, so a short file cannot be one.
-        guard let _ = try? handle.seek(toOffset: 1080),
+        guard (try? handle.seek(toOffset: 1080)) != nil,
               let tag = try? handle.read(upToCount: 4), tag.count == 4 else { return false }
         var probe = Data(count: 1080)
         probe.append(tag)
