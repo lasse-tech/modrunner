@@ -1,0 +1,121 @@
+/* ModRunner — English (the development language).
+
+   Tracker notation is deliberately not translated: LN, TRACK, POS, BLOCK,
+   LINE, TEMPO, BPM and CH are the notation itself, and every tracker on every
+   platform has always shown them this way. */
+
+/* Menus */
+"menu.about"          = "About ModRunner";
+"menu.settings"       = "Settings…";
+"menu.hide"           = "Hide ModRunner";
+"menu.quit"           = "Quit ModRunner";
+"menu.file"           = "File";
+"menu.view"           = "View";
+"menu.window"         = "Window";
+"menu.open"           = "Open…";
+"menu.minimise"       = "Minimise";
+"menu.close"          = "Close";
+"menu.showTracker"    = "Show Tracker";
+"menu.amigaFilter"    = "Amiga Filter";
+"menu.fullScreen"     = "Full Screen";
+"menu.miniPlayer"     = "Mini Player";
+
+/* Skins and visualisations */
+"skin.native"         = "Native";
+"visualizer.levels"   = "Levels";
+"visualizer.waveform" = "Waveform";
+
+/* Player */
+"player.noModule"       = "No module";
+"player.noModuleDashed" = "— no module —";
+"player.dropHint"       = "Drop a module or a folder here";
+"player.modules"        = "Modules";
+"player.modulesDrop"    = "MODULES  —  drop files or a drawer here";
+"player.songPosition"   = "SONG POSITION";
+"player.volume"         = "VOL";
+
+/* Buttons */
+"button.load"   = "Load";
+"button.tracks" = "Tracks";
+"button.open"   = "Open…";
+
+/* Statistics */
+"stat.position" = "Position";
+"stat.block"    = "Block";
+"stat.tempo"    = "Tempo";
+
+/* Status line */
+"status.noModuleLoaded"  = "No module loaded.";
+"status.noModulesFound"  = "No MED modules found in that drop.";
+"status.audioFailed"     = "Audio could not start: %@";
+"status.samples"         = "%1$d/%2$d samples";
+"status.blocks"          = "%d blocks";
+"status.tracks"          = "%d tracks";
+"status.lines"           = "%d lines";
+"status.notes"           = "%d notes";
+"status.midiSilent"      = "%d MIDI (silent)";
+
+/* File panel */
+"panel.chooseModules" = "Choose MED/OctaMED modules or a folder";
+
+/* Tooltips */
+"tooltip.close"       = "Close";
+"tooltip.minimise"    = "Minimise";
+"tooltip.zoom"        = "Zoom — show or hide the tracker";
+"tooltip.depth"       = "Send behind other windows";
+"tooltip.filterOn"    = "Amiga output filter on — click to bypass";
+"tooltip.filterOff"   = "Amiga output filter off — click to engage";
+"tooltip.channelMuted"   = "Channel %d muted — click to unmute, double-click to solo";
+"tooltip.channelUnmuted" = "Click to mute channel %d, double-click to solo";
+
+/* Full-screen stage */
+"stage.keys" = "ESC  leave    SPACE  play/pause    ←/→  position";
+
+/* Settings */
+"settings.title"           = "Settings";
+"settings.language"        = "Language";
+"settings.language.system" = "System";
+"settings.language.en"     = "English";
+"settings.language.de"     = "German";
+"settings.languageNote"    = "ModRunner follows the system language unless you pick one here.";
+
+/* Errors */
+"error.tooShort"          = "File is too short to be a MED module.";
+"error.unknownFormat"     = "Not a MED module (found id '%@', expected MMD0-MMD3).";
+"error.unsupportedFormat" = "Unsupported MED format: %@";
+"error.corrupt"           = "Module is damaged: %@";
+"error.audioFormat"       = "Could not create the audio format.";
+
+/* About panel */
+"about.tagline" = "A player for MED / OctaMED and ProTracker modules — the Amiga tracker formats of the late eighties and early nineties.";
+"about.chip.unreleased"      = "UNRELEASED";
+"about.chip.noDependencies"  = "NO DEPENDENCIES";
+"about.formats"                    = "FORMATS";
+"about.formats.octamed.prefix"     = "OctaMED";
+"about.formats.octamed.suffix"     = ", played in full";
+"about.formats.protracker.prefix"  = "ProTracker";
+"about.formats.protracker.suffix"  = ", same replayer";
+"about.formats.note"               = ".med in MMD0 and MMD1; MMD2 and MMD3 are detected and reported, not played";
+"about.accuracy"          = "ACCURACY vs. LIBXMP";
+"about.accuracy.envelope" = "Envelope correlation";
+"about.accuracy.lag"      = "Best lag";
+"about.accuracy.duration" = "Duration";
+"about.credits"             = "BUILT ON THE WORK OF";
+"about.credit.kinnunen"     = "MED, OctaMED and the format specification";
+"about.credit.wiles"        = "The OctaMED SoundStudio manual";
+"about.credit.openmpt.name" = "The OpenMPT developers";
+"about.credit.openmpt"      = "Their MED loader, used to cross-check the tempo conversion";
+"about.credit.libxmp"       = "libxmp, the reference renderer";
+"about.button.licences" = "Licences";
+"about.button.close"    = "Close";
+
+/* View options and recently played */
+"player.view"        = "VIEW";
+"button.filter"      = "LED";
+"button.fullScreen"  = "Full";
+"button.miniPlayer"  = "Mini";
+"tooltip.switchSkin" = "Switch to %@";
+"tooltip.expand"     = "Back to the full player";
+"menu.recent"        = "Recently Played";
+"menu.recent.clear"  = "Clear Menu";
+"menu.recent.empty"  = "Nothing yet";

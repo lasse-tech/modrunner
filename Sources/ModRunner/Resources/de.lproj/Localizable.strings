@@ -1,0 +1,121 @@
+/* ModRunner — Deutsch.
+
+   Die Tracker-Notation bleibt bewusst unübersetzt: LN, TRACK, POS, BLOCK,
+   LINE, TEMPO, BPM und CH sind die Notation selbst, und jeder Tracker auf
+   jeder Plattform hat sie immer so geschrieben. */
+
+/* Menüs */
+"menu.about"          = "Über ModRunner";
+"menu.settings"       = "Einstellungen…";
+"menu.hide"           = "ModRunner ausblenden";
+"menu.quit"           = "ModRunner beenden";
+"menu.file"           = "Ablage";
+"menu.view"           = "Darstellung";
+"menu.window"         = "Fenster";
+"menu.open"           = "Öffnen…";
+"menu.minimise"       = "Im Dock ablegen";
+"menu.close"          = "Schließen";
+"menu.showTracker"    = "Tracker anzeigen";
+"menu.amigaFilter"    = "Amiga-Filter";
+"menu.fullScreen"     = "Vollbild";
+"menu.miniPlayer"     = "Mini-Player";
+
+/* Skins und Visualisierungen */
+"skin.native"         = "Nativ";
+"visualizer.levels"   = "Pegel";
+"visualizer.waveform" = "Wellenform";
+
+/* Player */
+"player.noModule"       = "Kein Modul";
+"player.noModuleDashed" = "— kein Modul —";
+"player.dropHint"       = "Modul oder Ordner hierher ziehen";
+"player.modules"        = "Module";
+"player.modulesDrop"    = "MODULE  —  Dateien oder Schublade hierher ziehen";
+"player.songPosition"   = "SONGPOSITION";
+"player.volume"         = "LAUT";
+
+/* Schalter */
+"button.load"   = "Laden";
+"button.tracks" = "Spuren";
+"button.open"   = "Öffnen…";
+
+/* Kennzahlen */
+"stat.position" = "Position";
+"stat.block"    = "Block";
+"stat.tempo"    = "Tempo";
+
+/* Statuszeile */
+"status.noModuleLoaded"  = "Kein Modul geladen.";
+"status.noModulesFound"  = "In diesem Ordner wurden keine MED-Module gefunden.";
+"status.audioFailed"     = "Audio konnte nicht gestartet werden: %@";
+"status.samples"         = "%1$d/%2$d Samples";
+"status.blocks"          = "%d Blöcke";
+"status.tracks"          = "%d Spuren";
+"status.lines"           = "%d Zeilen";
+"status.notes"           = "%d Noten";
+"status.midiSilent"      = "%d MIDI (stumm)";
+
+/* Dateiauswahl */
+"panel.chooseModules" = "MED-/OctaMED-Module oder einen Ordner wählen";
+
+/* Kurzhilfen */
+"tooltip.close"       = "Schließen";
+"tooltip.minimise"    = "Im Dock ablegen";
+"tooltip.zoom"        = "Zoom — Tracker ein- oder ausblenden";
+"tooltip.depth"       = "Hinter andere Fenster legen";
+"tooltip.filterOn"    = "Amiga-Ausgangsfilter an — zum Umgehen klicken";
+"tooltip.filterOff"   = "Amiga-Ausgangsfilter aus — zum Einschalten klicken";
+"tooltip.channelMuted"   = "Kanal %d stumm — klicken zum Aufheben, Doppelklick für Solo";
+"tooltip.channelUnmuted" = "Kanal %d stummschalten, Doppelklick für Solo";
+
+/* Vollbild */
+"stage.keys" = "ESC  zurück    LEER  Play/Pause    ←/→  Position";
+
+/* Einstellungen */
+"settings.title"           = "Einstellungen";
+"settings.language"        = "Sprache";
+"settings.language.system" = "System";
+"settings.language.en"     = "Englisch";
+"settings.language.de"     = "Deutsch";
+"settings.languageNote"    = "ModRunner folgt der Systemsprache, solange hier nichts gewählt ist.";
+
+/* Fehler */
+"error.tooShort"          = "Die Datei ist zu kurz für ein MED-Modul.";
+"error.unknownFormat"     = "Kein MED-Modul (Kennung „%@“ gefunden, erwartet MMD0-MMD3).";
+"error.unsupportedFormat" = "Nicht unterstütztes MED-Format: %@";
+"error.corrupt"           = "Das Modul ist beschädigt: %@";
+"error.audioFormat"       = "Das Audioformat konnte nicht erzeugt werden.";
+
+/* Über-Fenster */
+"about.tagline" = "Ein Player für MED-/OctaMED- und ProTracker-Module — die Amiga-Trackerformate der späten Achtziger und frühen Neunziger.";
+"about.chip.unreleased"      = "UNVERÖFFENTLICHT";
+"about.chip.noDependencies"  = "OHNE ABHÄNGIGKEITEN";
+"about.formats"                    = "FORMATE";
+"about.formats.octamed.prefix"     = "OctaMED";
+"about.formats.octamed.suffix"     = ", vollständig gespielt";
+"about.formats.protracker.prefix"  = "ProTracker";
+"about.formats.protracker.suffix"  = ", derselbe Replayer";
+"about.formats.note"               = ".med als MMD0 und MMD1; MMD2 und MMD3 werden erkannt und gemeldet, aber nicht gespielt";
+"about.accuracy"          = "GENAUIGKEIT ggü. LIBXMP";
+"about.accuracy.envelope" = "Hüllkurven-Korrelation";
+"about.accuracy.lag"      = "Bester Versatz";
+"about.accuracy.duration" = "Dauer";
+"about.credits"             = "AUFGEBAUT AUF DER ARBEIT VON";
+"about.credit.kinnunen"     = "MED, OctaMED und die Formatspezifikation";
+"about.credit.wiles"        = "Das Handbuch zu OctaMED SoundStudio";
+"about.credit.openmpt.name" = "Die OpenMPT-Entwickler";
+"about.credit.openmpt"      = "Ihr MED-Loader, an dem die Tempoumrechnung gegengeprüft wurde";
+"about.credit.libxmp"       = "libxmp, der Referenz-Renderer";
+"about.button.licences" = "Lizenzen";
+"about.button.close"    = "Schließen";
+
+/* Darstellungsoptionen und Verlauf */
+"player.view"        = "ANSICHT";
+"button.filter"      = "LED";
+"button.fullScreen"  = "Voll";
+"button.miniPlayer"  = "Mini";
+"tooltip.switchSkin" = "Zu %@ wechseln";
+"tooltip.expand"     = "Zurück zum vollen Player";
+"menu.recent"        = "Zuletzt gespielt";
+"menu.recent.clear"  = "Liste löschen";
+"menu.recent.empty"  = "Noch nichts";

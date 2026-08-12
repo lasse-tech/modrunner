@@ -10,8 +10,8 @@ struct ChannelMeters: View {
     let levels: [Float]
     /// Channels the listener has silenced, and the callbacks to change that.
     var muted: Set<Int> = []
-    var onToggleMute: ((Int) -> Void)? = nil
-    var onSolo: ((Int) -> Void)? = nil
+    var onToggleMute: ((Int) -> Void)?
+    var onSolo: ((Int) -> Void)?
     var barWidth: CGFloat = 14
     /// Total height including the channel numbers, so the meters occupy the
     /// same box as the other visualisations.
@@ -122,8 +122,8 @@ private struct ChannelButton: View {
             .onTapGesture { onToggle() }
             .onHover { hovering = $0 }
             .help(muted
-                  ? "Channel \(number) muted — click to unmute, double-click to solo"
-                  : "Click to mute channel \(number), double-click to solo")
+                  ? L10n.t("tooltip.channelMuted", number)
+                  : L10n.t("tooltip.channelUnmuted", number))
     }
 }
 
@@ -157,11 +157,18 @@ struct SmoothTrackerView: View {
     let line: Int
     let progress: Double
 
+    /// The panel's proportions are the defaults; the full-screen stage passes
+    /// its own, so both are the same view at different sizes.
+    var rowHeight: CGFloat = SmoothTrackerView.rowHeight
+    var fontSize: CGFloat = 11
+    var visibleRows: Int = SmoothTrackerView.visibleRows
+    var maxTracks: Int = 8
+
     static let rowHeight: CGFloat = 17
     static let visibleRows = 11
     static var height: CGFloat { rowHeight * CGFloat(visibleRows) }
 
-    private var half: Int { Self.visibleRows / 2 }
+    private var half: Int { visibleRows / 2 }
 
     var body: some View {
         ZStack {
@@ -172,7 +179,7 @@ struct SmoothTrackerView: View {
                     RoundedRectangle(cornerRadius: 5)
                         .strokeBorder(Brand.orange.opacity(0.45), lineWidth: 1)
                 )
-                .frame(height: Self.rowHeight)
+                .frame(height: rowHeight)
 
             VStack(spacing: 0) {
                 // One extra row at each end so the strip never runs dry mid-scroll.
@@ -180,9 +187,9 @@ struct SmoothTrackerView: View {
                     row(at: line + offset)
                 }
             }
-            .offset(y: -CGFloat(progress) * Self.rowHeight)
+            .offset(y: -CGFloat(progress) * rowHeight)
         }
-        .frame(height: Self.height)
+        .frame(height: rowHeight * CGFloat(visibleRows))
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .background(
             RoundedRectangle(cornerRadius: 8).fill(.black.opacity(0.22))
@@ -197,7 +204,7 @@ struct SmoothTrackerView: View {
 
         return HStack(spacing: 0) {
             Text(valid ? String(format: "%03d", index) : "")
-                .frame(width: 34, alignment: .leading)
+                .frame(width: (fontSize * 3.1).rounded(), alignment: .leading)
                 .foregroundStyle(onBeat ? .secondary : .tertiary)
 
             if valid, let block {
@@ -209,9 +216,9 @@ struct SmoothTrackerView: View {
                 Spacer()
             }
         }
-        .font(.system(size: 11, design: .monospaced))
+        .font(.system(size: fontSize, design: .monospaced))
         .padding(.horizontal, 10)
-        .frame(height: Self.rowHeight)
+        .frame(height: rowHeight)
         // Rows fade out towards the edges, which keeps the eye on the playhead.
         .opacity(distance <= 1 ? 1 : max(0.28, 1 - Double(distance) * 0.13))
         .background(onBeat ? Color.primary.opacity(0.05) : .clear)
@@ -222,7 +229,7 @@ struct SmoothTrackerView: View {
         let hasNote = note.note > 0
         let hasCommand = note.command != 0 || note.data != 0
 
-        return HStack(spacing: 5) {
+        return HStack(spacing: (fontSize * 0.45).rounded()) {
             Text(TrackerView.noteName(note.note))
                 .foregroundStyle(hasNote ? AnyShapeStyle(Brand.orange) : AnyShapeStyle(.quaternary))
             Text(note.instrument > 0 ? String(format: "%02X", note.instrument) : "··")
@@ -237,7 +244,7 @@ struct SmoothTrackerView: View {
         return module.blocks[block]
     }
 
-    private var trackCount: Int { min(currentBlock?.tracks ?? 4, 8) }
+    private var trackCount: Int { min(currentBlock?.tracks ?? 4, maxTracks) }
 }
 
 // MARK: - Transport

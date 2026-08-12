@@ -10,10 +10,10 @@ import SwiftUI
 /// Amiga.
 struct AmigaTitleBar: View {
     let title: String
-    var onClose: (() -> Void)? = nil
-    var onMinimise: (() -> Void)? = nil
-    var onZoom: (() -> Void)? = nil
-    var onDepth: (() -> Void)? = nil
+    var onClose: (() -> Void)?
+    var onMinimise: (() -> Void)?
+    var onZoom: (() -> Void)?
+    var onDepth: (() -> Void)?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -21,7 +21,7 @@ struct AmigaTitleBar: View {
                 .frame(width: 24, height: 20)
                 .contentShape(Rectangle())
                 .onTapGesture { onClose?() }
-                .help("Close")
+                .help(L10n.t("tooltip.close"))
 
             ZStack {
                 BevelBox(style: .raised, fill: Amiga.grey)
@@ -37,19 +37,19 @@ struct AmigaTitleBar: View {
                 .frame(width: 24, height: 20)
                 .contentShape(Rectangle())
                 .onTapGesture { onMinimise?() }
-                .help("Minimise")
+                .help(L10n.t("tooltip.minimise"))
 
             GadgetBox { ZoomGlyph() }
                 .frame(width: 24, height: 20)
                 .contentShape(Rectangle())
                 .onTapGesture { onZoom?() }
-                .help("Zoom — show or hide the tracker")
+                .help(L10n.t("tooltip.zoom"))
 
             GadgetBox { DepthGlyph() }
                 .frame(width: 24, height: 20)
                 .contentShape(Rectangle())
                 .onTapGesture { onDepth?() }
-                .help("Send behind other windows")
+                .help(L10n.t("tooltip.depth"))
         }
     }
 
@@ -130,7 +130,7 @@ struct AmigaTitleBar: View {
 /// A push button. Intuition buttons invert to black-on-grey while held.
 struct AmigaButton: View {
     let label: String
-    var width: CGFloat? = nil
+    var width: CGFloat?
     var enabled: Bool = true
     let action: () -> Void
 
@@ -197,7 +197,7 @@ struct AmigaField: View {
 struct AmigaSlider: View {
     var value: Double            // 0...1
     var knobWidth: CGFloat = 28
-    var onScrub: ((Double) -> Void)? = nil
+    var onScrub: ((Double) -> Void)?
 
     var body: some View {
         GeometryReader { geo in

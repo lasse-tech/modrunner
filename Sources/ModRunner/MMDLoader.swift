@@ -9,13 +9,13 @@ enum MMDLoadError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .tooShort:
-            return "File is too short to be a MED module."
+            return L10n.t("error.tooShort")
         case .unknownFormat(let id):
-            return "Not a MED module (found id '\(id)', expected MMD0-MMD3)."
+            return L10n.t("error.unknownFormat", id)
         case .unsupportedFormat(let id):
-            return "'\(id)' modules are not supported yet — only MMD0 and MMD1."
+            return L10n.t("error.unsupportedFormat", id)
         case .corrupt(let what):
-            return "Module is damaged: \(what)"
+            return L10n.t("error.corrupt", what)
         }
     }
 }
@@ -29,8 +29,6 @@ enum MMDLoadError: LocalizedError {
 struct MMDLoader {
 
     private let bytes: [UInt8]
-
-    private init(bytes: [UInt8]) { self.bytes = bytes }
 
     static func load(url: URL) throws -> MMDModule {
         let data = try Data(contentsOf: url)

@@ -81,7 +81,7 @@ final class AudioOutput {
             interleaved: false
         ) else {
             throw NSError(domain: "ModRunner", code: 1,
-                          userInfo: [NSLocalizedDescriptionKey: "Could not create the audio format."])
+                          userInfo: [NSLocalizedDescriptionKey: L10n.t("error.audioFormat")])
         }
 
         replayer.prepare(sampleRate: sampleRate)

@@ -12,8 +12,9 @@ enum Skin: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
+        // "Workbench" is the name of the thing it imitates, in any language.
         case .amiga: return "Workbench"
-        case .native: return "Native"
+        case .native: return L10n.t("skin.native")
         }
     }
 

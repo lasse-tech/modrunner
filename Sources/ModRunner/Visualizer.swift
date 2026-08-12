@@ -13,8 +13,8 @@ enum VisualizerStyle: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .bars: return "Levels"
-        case .waveform: return "Waveform"
+        case .bars: return L10n.t("visualizer.levels")
+        case .waveform: return L10n.t("visualizer.waveform")
         }
     }
 
@@ -40,8 +40,8 @@ struct VisualizerView: View {
     let levels: [Float]
     let samples: [Float]
     var muted: Set<Int> = []
-    var onToggleMute: ((Int) -> Void)? = nil
-    var onSolo: ((Int) -> Void)? = nil
+    var onToggleMute: ((Int) -> Void)?
+    var onSolo: ((Int) -> Void)?
 
     /// Both visualisations occupy exactly this box. If they differed, switching
     /// between them would shift everything below in the window.

@@ -17,6 +17,20 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/ModRunner"
 
+# The interface strings live in the SwiftPM resource bundle that Bundle.module
+# resolves. Without it the app traps on the first look-up, so this is not
+# optional.
+BUNDLE="$(swift build -c "$CONFIG" --show-bin-path)/ModRunner_ModRunner.bundle"
+if [[ -d "$BUNDLE" ]]; then
+    cp -R "$BUNDLE" "$APP/Contents/Resources/"
+else
+    echo "error: $BUNDLE is missing; the app would have no interface strings" >&2
+    exit 1
+fi
+
+# Shown by the Licences button in the About panel.
+cp "$ROOT/THIRD-PARTY-NOTICES.md" "$APP/Contents/Resources/" 2>/dev/null || true
+
 # App icon from the brand package.
 ICON="$ROOT/brand/macos/ModRunner.icns"
 if [[ -f "$ICON" ]]; then
@@ -33,6 +47,9 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>CFBundleName</key><string>ModRunner</string>
     <key>CFBundleDisplayName</key><string>ModRunner</string>
     <key>CFBundleIdentifier</key><string>de.incudex.modrunner</string>
+    <key>CFBundleDevelopmentRegion</key><string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array><string>en</string><string>de</string></array>
     <key>CFBundleExecutable</key><string>ModRunner</string>
     <key>CFBundleIconFile</key><string>ModRunner</string>
     <key>CFBundlePackageType</key><string>APPL</string>
