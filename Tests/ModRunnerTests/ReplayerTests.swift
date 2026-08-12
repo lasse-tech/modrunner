@@ -20,8 +20,16 @@ final class ReplayerTests: XCTestCase {
         "Terminator II": (20, 32, 13),
     ]
 
+    /// Examples carry a `.med` or `.mod` extension; accept a bare name or a
+    /// full file name.
     private func moduleURL(_ name: String) -> URL {
-        Self.moduleDirectory.appendingPathComponent("\(name).med")
+        let direct = Self.moduleDirectory.appendingPathComponent(name)
+        if FileManager.default.fileExists(atPath: direct.path) { return direct }
+        for ext in ["med", "mod"] {
+            let candidate = Self.moduleDirectory.appendingPathComponent("\(name).\(ext)")
+            if FileManager.default.fileExists(atPath: candidate.path) { return candidate }
+        }
+        return Self.moduleDirectory.appendingPathComponent("\(name).med")
     }
 
     private func skipIfMissing(_ url: URL) throws {
@@ -274,6 +282,162 @@ final class ReplayerTests: XCTestCase {
         XCTAssertTrue(wave.allSatisfy { abs($0) <= 1.0 }, "waveform samples must stay in range")
     }
 
+    // MARK: - ProTracker modules
+
+    /// A minimal but valid M.K. module, built in code. The real MOD used during
+    /// development is somebody else's music and is not redistributable, so the
+    /// loader needs a fixture that can live in the repository and run in CI.
+    private func syntheticMOD(channels: Int = 4, patterns: Int = 2, orderLength: Int = 3) -> Data {
+        var data = Data(count: 1084)
+
+        func put(_ bytes: [UInt8], at offset: Int) {
+            data.replaceSubrange(offset..<(offset + bytes.count), with: bytes)
+        }
+
+        put(Array("test module".utf8), at: 0)
+
+        // One 32-byte sample in slot 1, volume 64, looping.
+        let sampleWords = 16
+        put([UInt8(sampleWords >> 8), UInt8(sampleWords & 0xFF)], at: 20 + 22)
+        put([0], at: 20 + 24)                 // finetune 0
+        put([64], at: 20 + 25)                // volume
+        put([0, 0], at: 20 + 26)              // repeat start
+        put([0, UInt8(sampleWords)], at: 20 + 28)
+        put(Array("saw".utf8), at: 20)
+
+        put([UInt8(orderLength)], at: 950)
+        put([0], at: 951)
+        for i in 0..<orderLength { put([UInt8(i % patterns)], at: 952 + i) }
+        put(Array("M.K.".utf8), at: 1080)
+
+        // Patterns: a C-2 (period 428) on channel 0 every fourth row, with a
+        // set-volume command so the effect path is exercised too.
+        var pattern = Data(count: patterns * 64 * channels * 4)
+        for p in 0..<patterns {
+            for row in 0..<64 where row % 4 == 0 {
+                let offset = ((p * 64 + row) * channels) * 4
+                let period = 428
+                pattern[offset] = UInt8((1 & 0xF0) | UInt8(period >> 8))
+                pattern[offset + 1] = UInt8(period & 0xFF)
+                pattern[offset + 2] = UInt8((1 << 4) | 0x0C)   // instrument 1, command C
+                pattern[offset + 3] = 64                        // volume 64
+            }
+        }
+        data.append(pattern)
+
+        // A sawtooth, so the render is unmistakably non-silent.
+        var sample = Data(count: sampleWords * 2)
+        for i in 0..<(sampleWords * 2) {
+            sample[i] = UInt8(bitPattern: Int8(truncatingIfNeeded: -128 + i * 8))
+        }
+        data.append(sample)
+        return data
+    }
+
+    func testLoadsSyntheticProTrackerModule() throws {
+        let module = try ModuleLoader.load(data: syntheticMOD())
+
+        XCTAssertEqual(module.formatID, "M.K.")
+        XCTAssertEqual(module.effectDialect, .protracker)
+        XCTAssertEqual(module.numTracks, 4)
+        XCTAssertEqual(module.blocks.count, 2)
+        XCTAssertEqual(module.playSequence, [0, 1, 0])
+        XCTAssertEqual(module.instruments.count, 31)
+        XCTAssertEqual(module.songName, "test module")
+        XCTAssertEqual(module.instruments[0].data.count, 32)
+        XCTAssertEqual(module.instruments[0].volume, 64)
+
+        // Period 428 is C-2, which MED numbers as note 13.
+        XCTAssertEqual(module.blocks[0].note(line: 0, track: 0).note, 13)
+        XCTAssertEqual(module.blocks[0].note(line: 0, track: 0).instrument, 1)
+        XCTAssertEqual(module.blocks[0].note(line: 0, track: 0).command, 0x0C)
+        XCTAssertEqual(module.blocks[0].note(line: 1, track: 0).note, 0)
+    }
+
+    func testSyntheticProTrackerModuleRenders() throws {
+        let module = try ModuleLoader.load(data: syntheticMOD())
+        let (left, right) = render(module: module, seconds: 4)
+        let peak = zip(left, right).map { max(abs($0), abs($1)) }.max() ?? 0
+        XCTAssertGreaterThan(peak, 0.01, "the synthetic module produced no sound")
+    }
+
+    func testRejectsTruncatedProTrackerModule() {
+        let truncated = syntheticMOD().prefix(1200)
+        XCTAssertThrowsError(try ModuleLoader.load(data: truncated))
+    }
+
+    func testLoadsProTrackerModule() throws {
+        let url = Self.moduleDirectory.appendingPathComponent("12th Warrior.mod")
+        try skipIfMissing(url)
+
+        let module = try ModuleLoader.load(url: url)
+        XCTAssertEqual(module.formatID, "M.K.")
+        XCTAssertEqual(module.effectDialect, .protracker)
+        XCTAssertEqual(module.numTracks, 4)
+        XCTAssertEqual(module.blocks.count, 23, "highest pattern in the order + 1")
+        XCTAssertEqual(module.playSequence.count, 30)
+        XCTAssertEqual(module.instruments.count, 31, "MOD always has 31 slots")
+        XCTAssertEqual(module.instruments.filter(\.isPlayable).count, 12)
+        XCTAssertEqual(module.songName, "12th warrior")
+        XCTAssertTrue(module.blocks.allSatisfy { $0.lines == 64 }, "MOD patterns are 64 rows")
+
+        // ProTracker timing expressed through the BPM mode: 6 ticks at 125 BPM.
+        XCTAssertEqual(module.ticksPerLine, 6)
+        XCTAssertEqual(module.defaultTempo, 125)
+        XCTAssertTrue(module.bpmMode)
+    }
+
+    func testProTrackerTempoIsOneTwentyFive() throws {
+        let url = Self.moduleDirectory.appendingPathComponent("12th Warrior.mod")
+        try skipIfMissing(url)
+        let module = try ModuleLoader.load(url: url)
+
+        let replayer = Replayer()
+        replayer.prepare(sampleRate: 44_100)
+        replayer.load(module: module)
+        XCTAssertEqual(replayer.snapshot().beatsPerMinute, 125.0, accuracy: 0.5)
+    }
+
+    func testProTrackerPeriodsMapToNotes() {
+        // The three octaves of the ProTracker table, at both ends.
+        XCTAssertEqual(MODLoader.note(forPeriod: 856), 1)    // C-1
+        XCTAssertEqual(MODLoader.note(forPeriod: 428), 13)   // C-2
+        XCTAssertEqual(MODLoader.note(forPeriod: 113), 36)   // B-3
+        XCTAssertEqual(MODLoader.note(forPeriod: 0), 0)      // no note
+        // A finetuned period should still land on the nearest note.
+        XCTAssertEqual(MODLoader.note(forPeriod: 855), 1)
+        XCTAssertEqual(MODLoader.note(forPeriod: 430), 13)
+    }
+
+    func testProTrackerModuleRendersAudibleAudio() throws {
+        let url = Self.moduleDirectory.appendingPathComponent("12th Warrior.mod")
+        try skipIfMissing(url)
+        let module = try ModuleLoader.load(url: url)
+        let (left, right) = render(module: module, seconds: 30)
+
+        let peak = zip(left, right).map { max(abs($0), abs($1)) }.max() ?? 0
+        XCTAssertGreaterThan(peak, 0.05, "the MOD is essentially silent")
+        XCTAssertLessThanOrEqual(peak, 1.0)
+
+        var longestSilence = 0, run = 0
+        for i in 0..<left.count {
+            if abs(left[i]) < 1e-5 && abs(right[i]) < 1e-5 {
+                run += 1
+                longestSilence = max(longestSilence, run)
+            } else {
+                run = 0
+            }
+        }
+        XCTAssertLessThan(longestSilence, Int(44_100 * 2),
+                          "gap of \(Double(longestSilence) / 44_100)s")
+    }
+
+    func testRejectsFileThatIsNeitherFormat() {
+        var junk = Data(repeating: 0x41, count: 2000)
+        junk.replaceSubrange(1080..<1084, with: Data("ZZZZ".utf8))
+        XCTAssertThrowsError(try ModuleLoader.load(data: junk))
+    }
+
     func testPlaybackAdvancesThroughSequence() throws {
         let url = moduleURL("Happy Hour")
         try skipIfMissing(url)
@@ -309,7 +473,7 @@ final class ReplayerTests: XCTestCase {
 
         let url = moduleURL(name)
         try skipIfMissing(url)
-        let module = try MMDLoader.load(url: url)
+        let module = try ModuleLoader.load(url: url)
         let seconds = Double(ProcessInfo.processInfo.environment["MED_SECONDS"] ?? "30") ?? 30
         let (left, right) = render(module: module, seconds: seconds)
 

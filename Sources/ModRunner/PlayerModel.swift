@@ -55,7 +55,7 @@ final class PlayerModel: ObservableObject {
 
     func load(url: URL) {
         do {
-            let loaded = try MMDLoader.load(url: url)
+            let loaded = try ModuleLoader.load(url: url)
             module = loaded
             replayer.load(module: loaded)
             snapshot = replayer.snapshot()
@@ -107,14 +107,10 @@ final class PlayerModel: ObservableObject {
         }
     }
 
-    /// Cheap sniff: a MED module starts with MMD0-MMD3. Extensions are unreliable
-    /// here because Amiga files usually have none.
+    /// Extensions are unreliable here — Amiga files usually have none — so the
+    /// decision is made on content.
     static func looksLikeModule(_ url: URL) -> Bool {
-        guard let handle = try? FileHandle(forReadingFrom: url) else { return false }
-        defer { try? handle.close() }
-        guard let head = try? handle.read(upToCount: 4), head.count == 4 else { return false }
-        let id = String(decoding: head, as: UTF8.self)
-        return ["MMD0", "MMD1", "MMD2", "MMD3"].contains(id)
+        ModuleLoader.looksLikeModule(url)
     }
 
     func select(index: Int, autoplay: Bool = true) {

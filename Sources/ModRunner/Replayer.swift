@@ -531,6 +531,13 @@ final class Replayer {
         case 0x1F:
             delay = note.data >> 4
             retrigger = note.data & 0x0F
+        case 0x0E where module.effectDialect == .protracker:
+            // ProTracker keeps note delay and retrigger in the Exy group.
+            switch note.data >> 4 {
+            case 0xD: delay = note.data & 0x0F
+            case 0x9: retrigger = note.data & 0x0F
+            default: break
+            }
         default:
             break
         }
@@ -642,6 +649,11 @@ final class Replayer {
 
     /// Effects that take place once, on the line itself (tick 0).
     private func applyLineEffect(_ note: MMDModule.Note, on track: Int, triggeredNote: Bool) {
+        if module.effectDialect == .protracker {
+            applyProTrackerLineEffect(note, on: track, triggeredNote: triggeredNote)
+            return
+        }
+
         var voice = voices[track]
         let param = note.data
         let hi = param >> 4
@@ -752,6 +764,120 @@ final class Replayer {
         if triggeredNote { updateStep(track) }
     }
 
+    /// ProTracker's once-per-line effects. Only the commands whose meaning
+    /// differs from MED need their own handling; the shared ones fall through to
+    /// the same voice state.
+    private func applyProTrackerLineEffect(_ note: MMDModule.Note, on track: Int, triggeredNote: Bool) {
+        var voice = voices[track]
+        let param = note.data
+        let hi = param >> 4
+        let lo = param & 0x0F
+
+        switch note.command {
+        case 0x00:
+            voice.arpeggioData = param
+
+        case 0x03:
+            if param > 0 { voice.portaSpeed = param }
+
+        case 0x04:
+            // ProTracker vibrato depth, not MED's doubled one.
+            if hi > 0 { voice.vibratoSpeed = hi }
+            if lo > 0 { voice.vibratoDepth = lo }
+
+        case 0x07:
+            if hi > 0 { voice.tremoloSpeed = hi }
+            if lo > 0 { voice.tremoloDepth = lo }
+
+        case 0x09:
+            // Sample offset, in units of 256 bytes.
+            if param > 0, !voice.sampleData.isEmpty {
+                let offset = param * 256
+                voice.position = offset < voice.sampleData.count ? Double(offset) : 0
+            }
+
+        case 0x0B:
+            pendingPositionJump = param
+
+        case 0x0C:
+            // A plain 0...64 byte, unlike MED's hex/decimal split.
+            voice.volume = min(64, max(0, param))
+
+        case 0x0D:
+            // Pattern break: continue on the next sequence entry, at a row
+            // given in binary-coded decimal.
+            pendingLineBreak = min(63, hi * 10 + lo)
+
+        case 0x0E:
+            voices[track] = voice
+            applyProTrackerExtended(sub: hi, value: lo, on: track)
+            return
+
+        case 0x0F:
+            // Below 0x20 this is ticks per line; at or above it, the BPM.
+            if param == 0 {
+                break
+            } else if param < 0x20 {
+                ticksPerLine = param
+            } else {
+                tempo = param
+                recomputeTiming()
+            }
+
+        default:
+            break
+        }
+
+        voices[track] = voice
+        if triggeredNote { updateStep(track) }
+    }
+
+    /// The `Exy` group.
+    private func applyProTrackerExtended(sub: Int, value: Int, on track: Int) {
+        var voice = voices[track]
+
+        switch sub {
+        case 0x1:
+            voice.period = max(28, voice.period - value)
+        case 0x2:
+            voice.period = min(8192, voice.period + value)
+        case 0x5:
+            voice.finetune = value > 7 ? value - 16 : value
+        case 0x6:
+            if value == 0 {
+                voice.loopLine = currentLine
+            } else if voice.loopCount == 0 {
+                voice.loopCount = value
+                pendingLoopLine = voice.loopLine
+            } else {
+                voice.loopCount -= 1
+                if voice.loopCount > 0 { pendingLoopLine = voice.loopLine }
+            }
+        case 0x9:
+            voice.retriggerEvery = value
+        case 0xA:
+            voice.volume = min(64, voice.volume + value)
+        case 0xB:
+            voice.volume = max(0, voice.volume - value)
+        case 0xC:
+            if value < ticksPerLine { voice.cutAtTick = value }
+        case 0xD:
+            if value > 0 {
+                voice.noteDelayTicks = value
+                voice.pendingNote = nil     // set by startNote when it applies
+            }
+        case 0xE:
+            if value > 0, lineRepeatsRemaining == 0 { lineRepeatsRemaining = value }
+        default:
+            // Filter, glissando, waveform selects and invert loop have no effect
+            // on this mixer.
+            break
+        }
+
+        voices[track] = voice
+        updateStep(track)
+    }
+
     /// Effects that run every tick.
     private func processEffects() {
         for track in voices.indices {
@@ -764,6 +890,7 @@ final class Replayer {
             let param = note.data
             let hi = param >> 4
             let lo = param & 0x0F
+            let protracker = module.effectDialect == .protracker
             var periodChanged = false
 
             // Delayed note (0x0F F2)
@@ -796,14 +923,18 @@ final class Replayer {
                     periodChanged = true
                 }
 
-            // The manual contrasts 01/02 with 11/12, which "only change the
-            // pitch on the first tick of each line" — so these run on every
-            // tick, tick 0 included.
+            // The MED manual contrasts 01/02 with 11/12, which "only change the
+            // pitch on the first tick of each line" — so in MED these run on
+            // every tick, tick 0 included. ProTracker skips tick 0.
             case 0x01:
-                voice.period = max(28, voice.period - param); periodChanged = true
+                if !protracker || tick > 0 {
+                    voice.period = max(28, voice.period - param); periodChanged = true
+                }
 
             case 0x02:
-                voice.period = min(8192, voice.period + param); periodChanged = true
+                if !protracker || tick > 0 {
+                    voice.period = min(8192, voice.period + param); periodChanged = true
+                }
 
             case 0x03, 0x05:
                 if tick > 0, voice.targetPeriod > 0, voice.portaSpeed > 0 {
@@ -814,7 +945,7 @@ final class Replayer {
                     }
                     periodChanged = true
                 }
-                if note.command == 0x05 {
+                if note.command == 0x05, !protracker || tick > 0 {
                     applyVolumeSlide(&voice, hi: hi, lo: lo)
                 }
 
@@ -827,7 +958,7 @@ final class Replayer {
                     voice.period = max(28, min(8192, voice.arpeggioBase + delta))
                     periodChanged = true
                 }
-                if note.command == 0x06 {
+                if note.command == 0x06, !protracker || tick > 0 {
                     applyVolumeSlide(&voice, hi: hi, lo: lo)
                 }
 
@@ -840,11 +971,15 @@ final class Replayer {
                     voice.volume = max(0, min(64, voice.volume + delta))
                 }
 
-            // "The volume is changed every tick — so if the TPL slider were 6, a
-            // decrease value of 1 would lower the volume by 6." That only adds
-            // up if tick 0 counts too, unlike ProTracker.
-            case 0x0A, 0x0D:
-                applyVolumeSlide(&voice, hi: hi, lo: lo)
+            // MED: "the volume is changed every tick — so if the TPL slider
+            // were 6, a decrease value of 1 would lower the volume by 6." That
+            // only adds up if tick 0 counts too. ProTracker skips tick 0, and
+            // its 0x0D is a pattern break rather than a slide.
+            case 0x0A:
+                if !protracker || tick > 0 { applyVolumeSlide(&voice, hi: hi, lo: lo) }
+
+            case 0x0D:
+                if !protracker { applyVolumeSlide(&voice, hi: hi, lo: lo) }
 
             default:
                 break

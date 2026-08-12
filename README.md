@@ -4,17 +4,19 @@
 ![Swift 6.0](https://img.shields.io/badge/Swift-6.0-FF6B35?logo=swift&logoColor=white)
 ![Licence Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-3B67A2)
 ![No dependencies](https://img.shields.io/badge/dependencies-none-2E7D32)
-![Formats MMD0 and MMD1](https://img.shields.io/badge/formats-MMD0%20%C2%B7%20MMD1-FFA997?labelColor=17130F)
+![Formats](https://img.shields.io/badge/formats-MMD0%20%C2%B7%20MMD1%20%C2%B7%20MOD-FFA997?labelColor=17130F)
 
-A small macOS player for MED / OctaMED modules — the Amiga tracker format from
-the late eighties and early nineties — presented in the style of the AmigaOS 3.x
-Workbench interface.
+A small macOS player for Amiga tracker modules — MED, OctaMED and ProTracker —
+from the late eighties and early nineties, presented in the style of the
+AmigaOS 3.x Workbench interface.
 
 <!-- Screenshot: run the app and grab the window if you want one in the README. -->
 
 ## What it does
 
-- Reads **MMD0** and **MMD1** modules (MMD2/MMD3 are detected and reported, not played)
+- Reads **MMD0** and **MMD1** MED/OctaMED modules (MMD2/MMD3 are detected and
+  reported, not played) and **ProTracker `.mod`** files (`M.K.`, `M!K!`, `FLT4`,
+  `xxCH` and friends, 2 to 32 channels)
 - Paula-style replayer: per-voice period, volume and looping, Catmull-Rom resampling
 - Effects `0x00`–`0x0F`: arpeggio, pitch slides, portamento, vibrato, tremolo,
   volume slides, TPL slider, position jump, set volume (including the `$80`–`$C0`
@@ -81,6 +83,9 @@ same module:
 | Envelope correlation (20 ms windows) | **0.985**, best lag 0 ms |
 | Spectral centroid | tracks the reference within a few percent |
 | Mean spectral cosine similarity | 0.79 |
+
+A ProTracker module was checked the same way: 255.0 s against 255.18 s,
+**0.964** envelope correlation at zero lag, and 0.93 mean spectral similarity.
 
 The residual spectral difference is the resampling kernel and the mixer's stereo
 separation, not note timing or pitch.

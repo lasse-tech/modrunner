@@ -26,6 +26,9 @@ All notable changes to this project are documented here. The format follows
 - Display synchronised to the speakers, compensating for output latency
 - The window position is remembered, separately per skin, and discarded when it
   would land on a screen that is no longer attached
+- ProTracker `.mod` support, loaded into the same model and played by the same
+  replayer; the effect dialect is carried on the module, since the command
+  numbers mean different things in the two formats
 - Opens modules from the command line and from the Finder
 - Offline-rendering test suite and a WAV export for listening checks
 - Four example modules by the author

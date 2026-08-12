@@ -1,9 +1,21 @@
 import Foundation
 
-/// In-memory representation of a MED/OctaMED module.
+/// Which set of effect command meanings a module uses.
 ///
-/// Field names follow Teijo Kinnunen's specification (docs/MMD_FileFormat.txt)
-/// so the loader can be read side by side with the document.
+/// The numbers collide: `0x0D` is a volume slide in MED but a pattern break in
+/// ProTracker, and `0x0F` sets MED's tempo slider where ProTracker sets speed or
+/// BPM. Commands `0x00`–`0x07` largely agree.
+enum EffectDialect {
+    case med
+    case protracker
+}
+
+/// In-memory representation of a module.
+///
+/// Field names follow Teijo Kinnunen's MED specification
+/// (docs/MMD_FileFormat.txt) so the loader can be read side by side with the
+/// document. ProTracker modules are loaded into the same shape, since both
+/// describe Paula voices playing 8-bit samples at a period.
 struct MMDModule {
 
     struct Instrument {
@@ -47,6 +59,7 @@ struct MMDModule {
 
     // Header
     var formatID: String = "MMD0"
+    var effectDialect: EffectDialect = .med
 
     // Song
     var songName: String = ""
