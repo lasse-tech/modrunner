@@ -60,10 +60,14 @@ let package = Package(
             // The interface is SwiftUI and AppKit, so it only exists on macOS.
             // The loader, replayer, localisation and CLI suites do not need it
             // and run on every platform the toolchain covers.
-            dependencies: interfaceTestDependencies + [
-                "ModRunnerKit",
-                "ModRunnerCLI"
-            ],
+            //
+            // ModRunnerCLI is deliberately not a dependency either. The CLI
+            // suite runs the built binary as a subprocess rather than calling
+            // into it, and linking an executable target into the test bundle
+            // gives Windows two `main` symbols to choose from. `swift test`
+            // builds every target in the package anyway, so the binary is
+            // there when the suite looks for it.
+            dependencies: interfaceTestDependencies + ["ModRunnerKit"],
             path: "Tests/ModRunnerTests",
             swiftSettings: [.swiftLanguageMode(.v5)]
         )
