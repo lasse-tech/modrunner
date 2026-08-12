@@ -65,10 +65,13 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Swift
+        # Not 6.0.3: its module maps collide with the Windows SDK the runners
+        # now ship, and every compile stops at "cyclic dependency in module
+        # 'ucrt'" before it ever reaches our own sources.
         uses: compnerd/gha-setup-swift@main
         with:
-          branch: swift-6.0.3-release
-          tag: 6.0.3-RELEASE
+          branch: swift-6.1.2-release
+          tag: 6.1.2-RELEASE
 
       - name: Show toolchain
         run: swift --version
