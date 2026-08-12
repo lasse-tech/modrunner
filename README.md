@@ -12,7 +12,12 @@ A small macOS player for Amiga tracker modules — MED, OctaMED and ProTracker �
 from the late eighties and early nineties, presented in the style of the
 AmigaOS 3.x Workbench interface.
 
-<!-- Screenshot: run the app and grab the window if you want one in the README. -->
+| Native | Workbench |
+|---|---|
+| ![The native interface playing a ProTracker module](docs/screenshots/native.png) | ![The AmigaOS 3.x Workbench interface playing the same module](docs/screenshots/workbench.png) |
+
+*The same module, the same replayer, the two interfaces — switchable mid-song
+with ⌘1 and ⌘2.*
 
 ## What it does
 
