@@ -35,10 +35,7 @@ final class AudioBackendTests: XCTestCase {
     /// this happens to run. A server with no device makes `start` throw, which
     /// is a pass: the failure is reported rather than crashing the process.
     func testMiniaudioStartsOrFailsCleanly() throws {
-        setenv("MODRUNNER_AUDIO_BACKEND", "miniaudio", 1)
-        defer { unsetenv("MODRUNNER_AUDIO_BACKEND") }
-
-        let output = AudioOutput(replayer: Replayer())
+        let output = AudioOutput(replayer: Replayer(), preferring: "miniaudio")
         XCTAssertEqual(AudioOutput.activeBackend, "miniaudio")
 
         do {

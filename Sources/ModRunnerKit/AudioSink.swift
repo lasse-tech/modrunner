@@ -49,8 +49,16 @@ public final class AudioOutput {
 
     public private(set) static var activeBackend = "none"
 
-    public init(replayer: Replayer) {
-        let requested = ProcessInfo.processInfo.environment["MODRUNNER_AUDIO_BACKEND"]?.lowercased()
+    public convenience init(replayer: Replayer) {
+        self.init(replayer: replayer,
+                  preferring: ProcessInfo.processInfo.environment["MODRUNNER_AUDIO_BACKEND"])
+    }
+
+    /// Takes the backend name rather than reading the environment, so a test can
+    /// ask for one without setting a variable it then has to put back — and
+    /// Windows has no `unsetenv` to put it back with.
+    init(replayer: Replayer, preferring backend: String?) {
+        let requested = backend?.lowercased()
 
         #if canImport(CMiniaudio)
         if requested == "miniaudio" {
