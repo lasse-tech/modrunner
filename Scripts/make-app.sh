@@ -17,6 +17,14 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/ModRunner"
 
+# App icon from the brand package.
+ICON="$ROOT/brand/macos/ModRunner.icns"
+if [[ -f "$ICON" ]]; then
+    cp "$ICON" "$APP/Contents/Resources/ModRunner.icns"
+else
+    echo "warning: $ICON is missing; the app will fall back to the generic icon" >&2
+fi
+
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -26,6 +34,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>CFBundleDisplayName</key><string>ModRunner</string>
     <key>CFBundleIdentifier</key><string>de.incudex.modrunner</string>
     <key>CFBundleExecutable</key><string>ModRunner</string>
+    <key>CFBundleIconFile</key><string>ModRunner</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>1.0</string>
     <key>CFBundleVersion</key><string>1</string>

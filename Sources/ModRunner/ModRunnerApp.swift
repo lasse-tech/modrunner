@@ -21,7 +21,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     /// Keeps the menu's tick mark in step when the Tracks button is used.
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         if menuItem.action == #selector(toggleTracker) {
-            menuItem.state = ContentView.trackerVisiblePreference ? .on : .off
+            menuItem.state = AmigaSkinView.trackerVisiblePreference ? .on : .off
+        }
+        if menuItem.action == #selector(selectSkin(_:)),
+           let raw = menuItem.representedObject as? String {
+            menuItem.state = (Skin.current.rawValue == raw) ? .on : .off
         }
         return true
     }
@@ -59,12 +63,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     // MARK: - Window
 
     private func buildWindow() {
-        // Start at whichever size matches the stored tracker preference, so the
-        // window does not visibly resize itself a moment after opening.
-        let size = NSSize(
-            width: ContentView.windowWidth,
-            height: ContentView.windowHeight(showingTracker: ContentView.trackerVisiblePreference)
-        )
+        // Start at whichever size matches the stored skin and tracker
+        // preference, so the window does not visibly resize itself a moment
+        // after opening.
+        let size = NSSize(width: RootView.initialSize().width,
+                          height: RootView.initialSize().height)
         let window = NSWindow(
             contentRect: NSRect(origin: .zero, size: size),
             styleMask: [.titled, .closable, .fullSizeContentView],
@@ -73,28 +76,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         )
 
         window.title = "ModRunner"
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        window.isMovableByWindowBackground = true
-        window.backgroundColor = NSColor(
-            calibratedRed: 0x95 / 255, green: 0x95 / 255, blue: 0x95 / 255, alpha: 1
-        )
 
-        // The Intuition title bar carries its own close and depth gadgets.
-        for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
-            window.standardWindowButton(button)?.isHidden = true
-        }
+        // The chrome is set per skin by WindowConfigurator; this is only the
+        // state the window opens in.
 
-        // Let the view decide its own height so the panels sit flush against
-        // the title bar instead of floating in the middle of the window.
         // ignoresSafeArea keeps SwiftUI from insetting the content below the
         // (transparent) macOS title bar, which would leave a grey strip above
-        // the Amiga title bar.
+        // the Workbench title bar.
         // NSHostingView publishes Auto Layout constraints derived from the
         // SwiftUI ideal size, and those win over setContentSize — which shrank
         // the window to a stamp. Hosting it inside a plain autoresizing
         // container keeps the window at the size we ask for.
-        let hosting = NSHostingView(rootView: ContentView().ignoresSafeArea())
+        let hosting = NSHostingView(rootView: RootView().ignoresSafeArea())
         hosting.translatesAutoresizingMaskIntoConstraints = true
         let container = NSView(frame: NSRect(origin: .zero, size: size))
         hosting.frame = container.bounds
@@ -111,6 +104,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         if ProcessInfo.processInfo.environment["MODRUNNER_PRINT_WINDOW_ID"] == "1" {
             print("WINDOW_ID \(window.windowNumber) frame=\(window.frame) content=\(window.contentView?.frame ?? .zero)")
             fflush(stdout)
+
+            // Dump the chrome repeatedly, so a skin switch can be observed too.
+            Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
+                let mask = window.styleMask
+                func shown(_ type: NSWindow.ButtonType) -> String {
+                    guard let button = window.standardWindowButton(type) else { return "absent" }
+                    return button.isHidden ? "hidden" : "visible"
+                }
+                print("""
+                CHROME skin=\(Skin.current.rawValue) \
+                titled=\(mask.contains(.titled)) \
+                fullSize=\(mask.contains(.fullSizeContentView)) \
+                transparent=\(window.titlebarAppearsTransparent) \
+                titleVisibility=\(window.titleVisibility == .visible ? "visible" : "hidden") \
+                close=\(shown(.closeButton)) min=\(shown(.miniaturizeButton)) zoom=\(shown(.zoomButton)) \
+                content=\(window.contentView?.frame ?? .zero)
+                """)
+                fflush(stdout)
+            }
         }
     }
 
@@ -138,8 +150,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         let tracker = NSMenuItem(title: "Show Tracker",
                                  action: #selector(toggleTracker), keyEquivalent: "t")
         tracker.target = self
-        tracker.state = ContentView.trackerVisiblePreference ? .on : .off
+        tracker.state = AmigaSkinView.trackerVisiblePreference ? .on : .off
         viewMenu.addItem(tracker)
+        viewMenu.addItem(.separator())
+
+        // Skin switching, one number key each.
+        for (index, skin) in Skin.allCases.enumerated() {
+            let item = NSMenuItem(title: skin.title,
+                                  action: #selector(selectSkin(_:)),
+                                  keyEquivalent: "\(index + 1)")
+            item.target = self
+            item.representedObject = skin.rawValue
+            item.state = (Skin.current == skin) ? .on : .off
+            viewMenu.addItem(item)
+        }
+
         viewMenuItem.submenu = viewMenu
         trackerMenuItem = tracker
 
@@ -153,6 +178,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
         mainMenu.addItem(viewMenuItem)
 
+        // A Window menu, so the standard shortcuts still work in the Workbench
+        // skin, where the system window buttons are hidden.
+        let windowMenuItem = NSMenuItem()
+        let windowMenu = NSMenu(title: "Window")
+        windowMenu.addItem(withTitle: "Minimise",
+                           action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        windowMenu.addItem(withTitle: "Close",
+                           action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        windowMenuItem.submenu = windowMenu
+        mainMenu.addItem(windowMenuItem)
+        NSApplication.shared.windowsMenu = windowMenu
+
         NSApplication.shared.mainMenu = mainMenu
     }
 
@@ -163,8 +200,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     /// Mirrors the Tracks button. Both write the same preference, which the
     /// view observes through @AppStorage.
     @objc private func toggleTracker() {
-        let visible = !ContentView.trackerVisiblePreference
+        let visible = !AmigaSkinView.trackerVisiblePreference
         UserDefaults.standard.set(visible, forKey: "showTracker")
         trackerMenuItem?.state = visible ? .on : .off
+    }
+
+    @objc private func selectSkin(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String else { return }
+        UserDefaults.standard.set(raw, forKey: Skin.storageKey)
     }
 }

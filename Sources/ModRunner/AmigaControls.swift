@@ -1,16 +1,27 @@
 import SwiftUI
 
 /// The window title bar, with the close gadget on the left and the
-/// depth/zoom gadgets on the right, as Intuition arranged them.
+/// minimise/zoom/depth gadgets on the right, as Intuition arranged them.
+///
+/// This skin hides the macOS window buttons, so these gadgets are the only
+/// window controls the user has — they all do real work. The zoom gadget maps
+/// onto the window's two sizes, which here means showing or hiding the tracker,
+/// and the depth gadget sends the window behind the others, as it did on the
+/// Amiga.
 struct AmigaTitleBar: View {
     let title: String
     var onClose: (() -> Void)? = nil
+    var onMinimise: (() -> Void)? = nil
+    var onZoom: (() -> Void)? = nil
+    var onDepth: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 0) {
             GadgetBox { CloseGlyph() }
                 .frame(width: 24, height: 20)
+                .contentShape(Rectangle())
                 .onTapGesture { onClose?() }
+                .help("Close")
 
             ZStack {
                 BevelBox(style: .raised, fill: Amiga.grey)
@@ -22,8 +33,23 @@ struct AmigaTitleBar: View {
             }
             .frame(height: 20)
 
+            GadgetBox { MinimiseGlyph() }
+                .frame(width: 24, height: 20)
+                .contentShape(Rectangle())
+                .onTapGesture { onMinimise?() }
+                .help("Minimise")
+
+            GadgetBox { ZoomGlyph() }
+                .frame(width: 24, height: 20)
+                .contentShape(Rectangle())
+                .onTapGesture { onZoom?() }
+                .help("Zoom — show or hide the tracker")
+
             GadgetBox { DepthGlyph() }
                 .frame(width: 24, height: 20)
+                .contentShape(Rectangle())
+                .onTapGesture { onDepth?() }
+                .help("Send behind other windows")
         }
     }
 
@@ -47,6 +73,35 @@ struct AmigaTitleBar: View {
             Rectangle()
                 .strokeBorder(Amiga.black, lineWidth: 2)
                 .frame(width: 11, height: 11)
+        }
+    }
+
+    /// Minimise gadget: a bar along the bottom edge.
+    private struct MinimiseGlyph: View {
+        var body: some View {
+            VStack {
+                Spacer()
+                Rectangle()
+                    .fill(Amiga.black)
+                    .frame(width: 11, height: 3)
+            }
+            .frame(width: 11, height: 11)
+        }
+    }
+
+    /// Zoom gadget: a small square inside a larger open one, for the two sizes.
+    private struct ZoomGlyph: View {
+        var body: some View {
+            ZStack(alignment: .topLeading) {
+                Rectangle()
+                    .strokeBorder(Amiga.black, lineWidth: 2)
+                    .frame(width: 12, height: 12)
+                Rectangle()
+                    .fill(Amiga.black)
+                    .frame(width: 5, height: 5)
+                    .offset(x: 2, y: 2)
+            }
+            .frame(width: 12, height: 12)
         }
     }
 

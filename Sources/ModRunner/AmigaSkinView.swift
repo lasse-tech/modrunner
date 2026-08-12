@@ -1,7 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct ContentView: View {
+struct AmigaSkinView: View {
 
     /// The window is a fixed size, as Amiga tool windows were, but it has two
     /// sizes: with and without the tracker panel.
@@ -17,15 +17,21 @@ struct ContentView: View {
         UserDefaults.standard.object(forKey: "showTracker") as? Bool ?? true
     }
 
-    @StateObject private var model = PlayerModel.shared
+    @ObservedObject var model: PlayerModel
     @State private var isDropTarget = false
     @AppStorage("showTracker") private var showTracker = true
 
     var body: some View {
         VStack(spacing: 0) {
-            AmigaTitleBar(title: titleBarText) {
-                NSApplication.shared.terminate(nil)
-            }
+            AmigaTitleBar(
+                title: titleBarText,
+                onClose: { keyWindow?.performClose(nil) },
+                onMinimise: { keyWindow?.miniaturize(nil) },
+                // The Amiga zoom gadget flipped between two window sizes; ours
+                // are "with tracker" and "without".
+                onZoom: { showTracker.toggle() },
+                onDepth: { keyWindow?.orderBack(nil) }
+            )
 
             VStack(spacing: 8) {
                 songPanel
@@ -53,15 +59,19 @@ struct ContentView: View {
             }
         }
         .onDrop(of: [.fileURL], isTargeted: $isDropTarget) { providers in
-            handleDrop(providers)
+            model.handleDrop(providers)
             return true
         }
-        .frame(width: ContentView.windowWidth,
-               height: ContentView.windowHeight(showingTracker: showTracker),
+        // Window sizing and chrome are handled centrally by RootView.
+        .frame(width: AmigaSkinView.windowWidth,
+               height: AmigaSkinView.windowHeight(showingTracker: showTracker),
                alignment: .top)
-        .background(WindowSizer(
-            size: CGSize(width: ContentView.windowWidth,
-                         height: ContentView.windowHeight(showingTracker: showTracker))))
+    }
+
+    /// The skin hides the system window buttons, so the drawn gadgets act on
+    /// the window directly.
+    private var keyWindow: NSWindow? {
+        NSApplication.shared.keyWindow ?? NSApplication.shared.windows.first
     }
 
     private var titleBarText: String {
@@ -144,9 +154,7 @@ struct ContentView: View {
             AmigaVolumeSlider(value: $model.volume)
                 .frame(width: 90)
 
-            AmigaButton(label: showTracker ? "Tracks·" : "Tracks", width: 58) {
-                showTracker.toggle()
-            }
+            AmigaButton(label: "Tracks", width: 66) { showTracker.toggle() }
             AmigaButton(label: "Load", width: 52) { model.openPanel() }
         }
         .amigaBevel(.raised)
@@ -202,25 +210,5 @@ struct ContentView: View {
     private var timeText: String {
         let seconds = Int(model.snapshot.elapsedSeconds)
         return String(format: "%d:%02d", seconds / 60, seconds % 60)
-    }
-
-    // MARK: - Drop
-
-    private func handleDrop(_ providers: [NSItemProvider]) {
-        let group = DispatchGroup()
-        var urls: [URL] = []
-        let queue = DispatchQueue(label: "med.drop")
-
-        for provider in providers {
-            group.enter()
-            _ = provider.loadObject(ofClass: URL.self) { url, _ in
-                if let url { queue.sync { urls.append(url) } }
-                group.leave()
-            }
-        }
-
-        group.notify(queue: .main) {
-            model.add(urls: urls.sorted { $0.lastPathComponent < $1.lastPathComponent })
-        }
     }
 }

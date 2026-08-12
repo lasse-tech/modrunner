@@ -1,5 +1,11 @@
 # ModRunner
 
+![macOS 13+](https://img.shields.io/badge/macOS-13%2B-17130F?logo=apple&logoColor=white)
+![Swift 6.0](https://img.shields.io/badge/Swift-6.0-FF6B35?logo=swift&logoColor=white)
+![Licence Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-3B67A2)
+![No dependencies](https://img.shields.io/badge/dependencies-none-2E7D32)
+![Formats MMD0 and MMD1](https://img.shields.io/badge/formats-MMD0%20%C2%B7%20MMD1-FFA997?labelColor=17130F)
+
 A small macOS player for MED / OctaMED modules — the Amiga tracker format from
 the late eighties and early nineties — presented in the style of the AmigaOS 3.x
 Workbench interface.
@@ -19,10 +25,16 @@ Workbench interface.
   ProTracker-style vibrato, set finetune, line loop, cut note, sample start
   offset, jump to next sequence entry, replay line, note delay and retrigger
 - Playlist with drag & drop; drop a single module or a whole drawer
-- Tracker view: the note data of the current block scrolling under a fixed
+- **Two interfaces**, switchable at any time from the View menu (⌘1 / ⌘2). They
+  share the model and the replayer, so switching mid-song changes nothing you
+  hear:
+  - **Native** — system materials and typography, SF Symbols, the ModRunner
+    palette, a continuously scrolling tracker and animated level meters
+  - **Workbench** — the AmigaOS 3.x re-creation, chunky and discrete on purpose
+- Tracker view: the note data of the current block moving under a fixed
   playhead, in OctaMED's notation, with beat lines marked — toggle it with the
-  **Tracks** button, and the window shrinks back when it is off
-- Per-voice VU meters, song position scrubbing, transport, volume
+  **Tracks** button or ⌘T, and the window resizes to match
+- Per-voice level meters, song position scrubbing, transport, volume
 - Opens modules passed on the command line or double-clicked in the Finder
 
 Synthetic and hybrid instruments are parsed but stay silent — they need OctaMED's

@@ -77,6 +77,9 @@ final class Replayer {
         var sequencePosition = 0
         var block = 0
         var line = 0
+        /// How far playback has moved through the current line, 0...1. Lets a
+        /// view scroll continuously rather than jumping a whole row at a time.
+        var lineProgress = 0.0
         var lineCount = 64
         var tempo = 33
         var ticksPerLine = 6
@@ -832,12 +835,20 @@ final class Replayer {
         let total = module.totalLines
         snap.progress = total > 0 ? min(1.0, Double(linesPlayed) / Double(total)) : 0
 
+        // Position within the current line: whole ticks plus the fraction of the
+        // tick already rendered.
+        if ticksPerLine > 0, samplesPerTick > 0 {
+            let withinTick = 1.0 - max(0, min(1, samplesUntilTick / samplesPerTick))
+            snap.lineProgress = min(1, max(0, (Double(tick) + withinTick) / Double(ticksPerLine)))
+        }
+
         snap.channelMeters = voices.map(\.meter)
         snap.channelInstruments = voices.map(\.instrument)
         snap.channelNotes = voices.map { $0.isActive ? $0.period : 0 }
 
-        // Meters decay once read, so the UI shows a falling peak.
-        for i in voices.indices { voices[i].meter *= 0.55 }
+        // Meters decay once read, so the UI shows a falling peak. Tuned for the
+        // 60 Hz polling rate the interface uses.
+        for i in voices.indices { voices[i].meter *= 0.75 }
 
         return snap
     }

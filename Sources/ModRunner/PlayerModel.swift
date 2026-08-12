@@ -31,7 +31,7 @@ final class PlayerModel: ObservableObject {
 
     init() {
         replayer.gain = Float(volume)
-        timer = Timer.publish(every: 1.0 / 30.0, on: .main, in: .common)
+        timer = Timer.publish(every: 1.0 / 60.0, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in self?.poll() }
     }
@@ -164,6 +164,27 @@ final class PlayerModel: ObservableObject {
     func playPrevious() {
         guard let index = currentIndex, index > 0 else { return }
         select(index: index - 1, autoplay: true)
+    }
+
+    // MARK: - Drag and drop
+
+    /// Resolves dropped items to file URLs and adds them to the playlist.
+    func handleDrop(_ providers: [NSItemProvider]) {
+        let group = DispatchGroup()
+        let queue = DispatchQueue(label: "de.incudex.modrunner.drop")
+        var urls: [URL] = []
+
+        for provider in providers {
+            group.enter()
+            _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                if let url { queue.sync { urls.append(url) } }
+                group.leave()
+            }
+        }
+
+        group.notify(queue: .main) { [weak self] in
+            self?.add(urls: urls.sorted { $0.lastPathComponent < $1.lastPathComponent })
+        }
     }
 
     // MARK: - File panel
