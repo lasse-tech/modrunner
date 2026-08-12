@@ -122,10 +122,9 @@ enum Commands {
             for line in 0..<block.lines {
                 let cells = (0..<tracks).map { track -> String in
                     let note = block.note(line: line, track: track)
-                    let name = noteName(note.note)
-                    let instrument = note.instrument > 0 ? String(format: "%02X", note.instrument) : ".."
-                    let command = (note.command != 0 || note.data != 0)
-                        ? String(format: "%02X%02X", note.command, note.data) : "...."
+                    let name = Notation.name(of: note.note)
+                    let instrument = Notation.instrument(note.instrument)
+                    let command = Notation.command(note.command, note.data)
                     return "\(name) \(instrument) \(command)"
                 }
                 print(String(format: "%03d ", line) + cells.joined(separator: " "))
@@ -143,16 +142,6 @@ enum Commands {
     }
 
     // MARK: - Formatting
-
-    private static let noteNames = ["C-", "C#", "D-", "D#", "E-", "F-", "F#",
-                                    "G-", "G#", "A-", "A#", "B-"]
-
-    /// MED numbers notes from 1, where 1 is C-1.
-    static func noteName(_ note: Int) -> String {
-        guard note > 0 else { return "---" }
-        let index = note - 1
-        return "\(noteNames[index % 12])\(index / 12 + 1)"
-    }
 
     static func timecode(_ seconds: Double) -> String {
         String(format: "%d:%05.2f", Int(seconds) / 60, seconds.truncatingRemainder(dividingBy: 60))

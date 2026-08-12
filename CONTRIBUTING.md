@@ -67,6 +67,18 @@ out of the way of whatever else is on screen:
 MED_SNAPSHOT=/tmp/shots swift test --filter SnapshotTests
 ```
 
+The portable skin needs no display at all, so its output can be looked at
+anywhere:
+
+```sh
+MED_SKIN_PNG=/tmp/skin swift test --filter SkinTests
+modrunner screenshot "Examples/Happy Hour.med" -o /tmp/window.png
+```
+
+Those PNGs are written by an encoder that stores rather than compresses, which
+costs about 150× the size a real encoder produces. Fine for looking at, wrong
+for committing — run anything you intend to keep through a proper encoder.
+
 ## Style
 
 Match what is already there: descriptive names, comments that explain *why* and

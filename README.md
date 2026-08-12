@@ -123,12 +123,27 @@ make info MODULE="Examples/Happy Hour.med"   # or run it through make
 
 ### Other platforms
 
-The window is macOS only — it is SwiftUI and AppKit, and the Workbench skin is
-drawn by hand on top of them. The engine and `modrunner` are not: both build and
-run their test suites on **Linux and Windows** on every push, and `play` finds a
-device there through miniaudio (ALSA, PulseAudio, PipeWire or JACK on Linux,
-WASAPI on Windows). Nothing needs installing to build it — miniaudio opens the
-system's audio library at run time rather than linking against it.
+The engine and `modrunner` build and run their test suites on **Linux and
+Windows** on every push, and `play` finds a device there through miniaudio
+(ALSA, PulseAudio, PipeWire or JACK on Linux, WASAPI on Windows). Nothing needs
+installing to build it — miniaudio opens the system's audio library at run time
+rather than linking against it.
+
+The Workbench interface is being taken with them. It is drawn into an array of
+pixels by `ModRunnerSkin` — no toolkit underneath, no window, no platform — so
+it is the same picture everywhere and can be rendered on a machine with no
+display at all:
+
+```sh
+modrunner screenshot <module> -o window.png    # the interface, without a window
+```
+
+![The Workbench interface drawn without a toolkit](docs/screenshots/portable-workbench.png)
+
+That picture was produced by the command above, not captured from a screen.
+What is still missing is the layer that puts those pixels in a window and sends
+mouse and key events back; until then the macOS app is the only one you can
+click on.
 
 ## Examples
 

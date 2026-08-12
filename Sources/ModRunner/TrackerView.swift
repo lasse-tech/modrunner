@@ -158,14 +158,10 @@ struct TrackerView: View {
         hasCommand(note) ? String(format: "%02X%02X", note.command, note.data) : "...."
     }
 
-    private static let noteNames = ["C-", "C#", "D-", "D#", "E-", "F-", "F#",
-                                    "G-", "G#", "A-", "A#", "B-"]
-
-    /// MED numbers notes from 1, where 1 is C-1.
+    /// The notation itself lives in the engine, so this view, the portable skin
+    /// and `modrunner dump` cannot disagree about what a note is called.
     static func noteName(_ note: Int) -> String {
-        guard note > 0 else { return "---" }
-        let index = note - 1
-        return "\(noteNames[index % 12])\(index / 12 + 1)"
+        Notation.name(of: note)
     }
 }
 

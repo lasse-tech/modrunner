@@ -12,6 +12,13 @@ All notable changes to this project are documented here. The format follows
   checked on every push. The interface stays macOS only
 - Audio output is behind a backend protocol: AVFoundation on Apple's platforms,
   miniaudio everywhere else, selectable with `MODRUNNER_AUDIO_BACKEND`
+- `ModRunnerSkin`: the Workbench interface drawn into a pixel buffer with no
+  toolkit under it — palette, bevels, an 8×8 bitmap face drawn for the project,
+  meters, sliders, buttons, the tracker panel and the playlist
+- `modrunner screenshot` renders that interface to a PNG without a window, which
+  is how it is checked on machines that cannot yet show it
+- Note notation moved into the engine; the tracker view, `dump` and the skin had
+  a copy each
 
 ## [1.0.0] - 2026-08-12
 

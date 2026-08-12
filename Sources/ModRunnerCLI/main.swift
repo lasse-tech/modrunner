@@ -9,6 +9,7 @@ usage:
   modrunner render <module> -o <file>          render to a 16-bit stereo WAV
   modrunner dump   <module> [--block N]        pattern data as text
   modrunner play   <module>...                 play through the audio device
+  modrunner screenshot <module> -o <file.png>  draw the Workbench interface
 
 options:
   -o, --output <file>   where render writes; - writes the WAV to stdout
@@ -16,13 +17,14 @@ options:
   --rate <n>            sample rate, default 44100
   --filter              render through the Amiga output filter
   --block <n>           dump one block instead of all of them
+  --no-tracker          leave the tracker panel out of the screenshot
   --no-duration         skip the duration measurement in info, which renders
                         the module to find out
 
 Exit codes: 0 success, 1 a module failed to load, 2 no audio device.
 """
 
-let commands: Set<String> = ["info", "render", "dump", "play"]
+let commands: Set<String> = ["info", "render", "dump", "play", "screenshot"]
 let raw = Array(CommandLine.arguments.dropFirst())
 
 if raw.isEmpty || raw.contains("-h") || raw.contains("--help") {
@@ -38,6 +40,7 @@ do {
     case "render": status = try Commands.render(arguments)
     case "dump":   status = try Commands.dump(arguments)
     case "play":   status = try Commands.play(arguments)
+    case "screenshot": status = try Screenshot.run(arguments)
     default:       status = 1        // unreachable: the parser checks the set
     }
     exit(status)

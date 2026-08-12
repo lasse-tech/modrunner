@@ -80,12 +80,23 @@ let package = Package(
             resources: [.process("Resources")],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        // The Workbench interface as pixels rather than as views: no toolkit
+        // under it, no window, no platform. It draws into an array and somebody
+        // else puts that on a screen — which is what makes the same interface
+        // possible on Linux and Windows, and what lets a test render the whole
+        // window with no display attached.
+        .target(
+            name: "ModRunnerSkin",
+            dependencies: ["ModRunnerKit"],
+            path: "Sources/ModRunnerSkin",
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
         // The directory cannot be called "modrunner": macOS is case-insensitive
         // by default, so it would be the same directory as the GUI target's.
         // The product is named modrunner, which is what the binary is called.
         .executableTarget(
             name: "ModRunnerCLI",
-            dependencies: ["ModRunnerKit"],
+            dependencies: ["ModRunnerKit", "ModRunnerSkin"],
             path: "Sources/ModRunnerCLI",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
@@ -101,7 +112,7 @@ let package = Package(
             // gives Windows two `main` symbols to choose from. `swift test`
             // builds every target in the package anyway, so the binary is
             // there when the suite looks for it.
-            dependencies: interfaceTestDependencies + ["ModRunnerKit"],
+            dependencies: interfaceTestDependencies + ["ModRunnerKit", "ModRunnerSkin"],
             path: "Tests/ModRunnerTests",
             swiftSettings: [.swiftLanguageMode(.v5)]
         )
