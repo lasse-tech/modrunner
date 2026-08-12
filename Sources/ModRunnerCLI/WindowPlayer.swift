@@ -129,8 +129,9 @@ enum WindowPlayer {
 
             // Fifty frames a second is more than a chunky interface needs and
             // leaves the machine to the replayer, which is the part with a
-            // deadline.
-            usleep(20_000)
+            // deadline. Foundation's sleep rather than usleep, which Windows
+            // does not have.
+            Thread.sleep(forTimeInterval: 0.02)
         }
 
         replayer.stop()
