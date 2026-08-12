@@ -7,6 +7,9 @@ import PackageDescription
 // manifest is evaluated on the host, so this is decided by which machine is
 // building.
 #if os(macOS)
+// Naming the target in the test dependencies is itself a reference SwiftPM
+// insists on resolving, so this list has to disappear along with the target.
+let interfaceTestDependencies: [Target.Dependency] = ["ModRunnerApp"]
 let interfaceTargets: [Target] = [
     // Not "ModRunner": the CLI product is "modrunner", and on a
     // case-insensitive filesystem the two executables would be the same
@@ -20,6 +23,7 @@ let interfaceTargets: [Target] = [
     )
 ]
 #else
+let interfaceTestDependencies: [Target.Dependency] = []
 let interfaceTargets: [Target] = []
 #endif
 
@@ -53,11 +57,10 @@ let package = Package(
         ),
         .testTarget(
             name: "ModRunnerTests",
-            dependencies: [
-                // The interface is SwiftUI and AppKit, so it only exists on
-                // macOS. The loader, replayer, localisation and CLI suites do
-                // not need it and run on every platform the toolchain covers.
-                .target(name: "ModRunnerApp", condition: .when(platforms: [.macOS])),
+            // The interface is SwiftUI and AppKit, so it only exists on macOS.
+            // The loader, replayer, localisation and CLI suites do not need it
+            // and run on every platform the toolchain covers.
+            dependencies: interfaceTestDependencies + [
                 "ModRunnerKit",
                 "ModRunnerCLI"
             ],
