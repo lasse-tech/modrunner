@@ -91,8 +91,11 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
             <key>UTTypeIdentifier</key><string>de.incudex.modrunner.med</string>
             <key>UTTypeDescription</key><string>MED/OctaMED module</string>
             <key>UTTypeIconFile</key><string>ModRunnerDocMED</string>
+            <!-- Deliberately not public.audio: nothing else can play a tracker
+                 module, and conforming to it hands the type to QuickTime and
+                 brings the generic music-note icon with it. -->
             <key>UTTypeConformsTo</key>
-            <array><string>public.data</string><string>public.audio</string></array>
+            <array><string>public.data</string></array>
             <key>UTTypeTagSpecification</key>
             <dict>
                 <key>public.filename-extension</key>
@@ -104,7 +107,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
             <key>UTTypeDescription</key><string>ProTracker module</string>
             <key>UTTypeIconFile</key><string>ModRunnerDocMOD</string>
             <key>UTTypeConformsTo</key>
-            <array><string>public.data</string><string>public.audio</string></array>
+            <array><string>public.data</string></array>
             <key>UTTypeTagSpecification</key>
             <dict>
                 <key>public.filename-extension</key>
