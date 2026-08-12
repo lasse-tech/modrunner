@@ -19,7 +19,7 @@ final class PlayerModel: ObservableObject {
     @Published private(set) var playlist: [Entry] = []
     @Published private(set) var currentIndex: Int? = nil
     @Published private(set) var status: String = "No module loaded."
-    @Published var volume: Double = 0.7 {
+    @Published var volume: Double = 0.85 {
         didSet { replayer.gain = Float(volume) }
     }
 

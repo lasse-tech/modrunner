@@ -131,9 +131,21 @@ final class Replayer {
     /// 0 = mono, 1 = the hard left/right split of real Amiga hardware, which is
     /// tiring on headphones. 0.45 matches what other players default to.
     var stereoSeparation: Double = 0.45
-    /// Master gain applied after the module's own master volume. Kept below
-    /// unity so four voices at full volume still leave headroom.
-    var gain: Float = 0.5
+    /// The listener's volume, 0...1. Full scale here is the loudest setting
+    /// that does not distort; the headroom below takes care of that.
+    var gain: Float = 1.0
+
+    /// Room for the voices to sum without running out of scale.
+    ///
+    /// Voices are summed, so the mix grows with their number: four voices at
+    /// full volume reach twice full scale on one side. Mapping the volume
+    /// slider straight onto the master gain therefore drove the mix to about
+    /// 1.7x full scale at the top of its travel, and the limiter — which is
+    /// meant to be a safety net for the odd peak — was compressing a few per
+    /// cent of every sample continuously, which is heard as a crunch.
+    /// 1/sqrt(voices) is exactly the four-voice worst case and stays generous
+    /// for wider modules.
+    private var mixHeadroom: Float = 0.5
 
     /// How far ahead of the speakers rendering runs. Everything the interface
     /// reads is delayed by this much, so the display matches what is heard.
@@ -171,6 +183,7 @@ final class Replayer {
                 ? newModule.trackVolumes[index] : 64
             return voice
         }
+        mixHeadroom = 1.0 / Float(max(1, voices.count)).squareRoot()
         tempo = newModule.defaultTempo
         ticksPerLine = newModule.ticksPerLine
         resetPositionLocked()
@@ -339,7 +352,7 @@ final class Replayer {
 
     private func mix(left: UnsafeMutablePointer<Float>, right: UnsafeMutablePointer<Float>,
                      frames: Int, peaks: inout [Float]) {
-        let masterScale = Float(module.masterVolume) / 64.0 * gain
+        let masterScale = Float(module.masterVolume) / 64.0 * gain * mixHeadroom
         // Amiga hardware panning: voices 0 and 3 left, 1 and 2 right.
         let separation = Float(max(0, min(1, stereoSeparation)))
         let near = 0.5 + 0.5 * separation

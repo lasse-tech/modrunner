@@ -326,6 +326,49 @@ final class ReplayerTests: XCTestCase {
                           "step of \(largestStep) against a peak of \(peak) — the loop seam clicks")
     }
 
+    /// At the top of the volume slider the mix must still fit in the available
+    /// scale. Voices are summed, so without headroom four of them reach twice
+    /// full scale and the limiter compresses a few per cent of every sample
+    /// continuously — heard as a crunch rather than as music.
+    func testFullVolumeDoesNotOverdriveTheMix() throws {
+        for name in ["Happy Hour", "Terminator II"] {
+            let url = moduleURL(name)
+            try skipIfMissing(url)
+            let module = try ModuleLoader.load(url: url)
+
+            let replayer = Replayer()
+            replayer.prepare(sampleRate: 44_100)
+            replayer.load(module: module)
+            replayer.gain = 1.0
+            replayer.play()
+
+            let total = 44_100 * 30
+            var left = [Float](repeating: 0, count: total)
+            var right = [Float](repeating: 0, count: total)
+            left.withUnsafeMutableBufferPointer { l in
+                right.withUnsafeMutableBufferPointer { r in
+                    var offset = 0
+                    while offset < total {
+                        let frames = min(512, total - offset)
+                        replayer.render(left: l.baseAddress! + offset,
+                                        right: r.baseAddress! + offset, frames: frames)
+                        offset += frames
+                    }
+                }
+            }
+
+            let peak = zip(left, right).map { max(abs($0), abs($1)) }.max() ?? 0
+            XCTAssertLessThanOrEqual(peak, 1.0, "\(name) exceeds full scale at maximum volume")
+
+            let limited = zip(left, right).reduce(0) { count, pair in
+                count + ((abs(pair.0) > 0.75 || abs(pair.1) > 0.75) ? 1 : 0)
+            }
+            let fraction = Double(limited) / Double(total)
+            XCTAssertLessThan(fraction, 0.005,
+                              "\(name): the limiter is shaping \(fraction * 100)% of samples")
+        }
+    }
+
     func testWaveformFollowsTheDelayedOutput() throws {
         let url = moduleURL("Happy Hour")
         try skipIfMissing(url)
