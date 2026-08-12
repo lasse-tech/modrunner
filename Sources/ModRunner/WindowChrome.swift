@@ -1,4 +1,5 @@
 import AppKit
+import ModRunnerKit
 
 /// Window sizing and decoration, driven from the app delegate rather than from
 /// SwiftUI.

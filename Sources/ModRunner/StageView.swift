@@ -1,4 +1,5 @@
 import SwiftUI
+import ModRunnerKit
 
 /// The full-screen presentation: the pattern, as big as the display allows,
 /// scrolling under a fixed playhead. Everything else is a thin strip of

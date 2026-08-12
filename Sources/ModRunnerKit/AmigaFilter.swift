@@ -12,7 +12,7 @@ import Foundation
 /// This is off by default. Other players do not apply it either, so leaving it
 /// off keeps playback comparable with them; switching it on is closer to what
 /// the machine actually sounded like.
-struct AmigaFilter {
+public struct AmigaFilter {
 
     /// The fixed RC stage every A500 had.
     private var fixed = OnePole()
@@ -23,7 +23,7 @@ struct AmigaFilter {
     private var sampleRate: Double = 44_100
 
     /// Whether the switchable stage is engaged.
-    var ledEnabled = false
+    public var ledEnabled = false
 
     mutating func prepare(sampleRate: Double) {
         self.sampleRate = sampleRate

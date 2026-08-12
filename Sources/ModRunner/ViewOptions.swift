@@ -1,4 +1,5 @@
 import SwiftUI
+import ModRunnerKit
 
 /// The things the View menu can do, in a form the interface can offer as
 /// buttons. Everything here was reachable only by menu or shortcut before, which

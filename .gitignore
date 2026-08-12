@@ -10,3 +10,9 @@ build/
 brand/*
 !brand/macos/
 !brand/README.txt
+
+# Intermediates a compiler run in the source root leaves behind.
+*.o
+*.d
+*.dia
+*.swiftdeps

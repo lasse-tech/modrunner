@@ -1,4 +1,5 @@
 import SwiftUI
+import ModRunnerKit
 
 /// How much of the pattern to draw, and how big. The small panel in the player
 /// window and the full-screen stage are the same view with different numbers,

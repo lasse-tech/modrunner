@@ -1,5 +1,6 @@
 import XCTest
 @testable import ModRunner
+@testable import ModRunnerKit
 
 /// These tests render the modules offline so playback can be checked without
 /// an audio device: parsing, tempo, channel activity and overall level.
@@ -972,33 +973,5 @@ final class ReplayerTests: XCTestCase {
         let out = URL(fileURLWithPath: ProcessInfo.processInfo.environment["MED_OUT"] ?? "/tmp/med-export.wav")
         try WAVWriter.write(left: left, right: right, sampleRate: 44_100, to: out)
         print("Wrote \(out.path)")
-    }
-}
-
-/// Minimal 16-bit stereo WAV writer, used only by the export test.
-enum WAVWriter {
-    static func write(left: [Float], right: [Float], sampleRate: Int, to url: URL) throws {
-        precondition(left.count == right.count)
-        let frames = left.count
-        let byteRate = sampleRate * 2 * 2
-        let dataSize = frames * 2 * 2
-
-        var out = Data()
-        func ascii(_ s: String) { out.append(contentsOf: Array(s.utf8)) }
-        func le32(_ v: Int) { for i in 0..<4 { out.append(UInt8((v >> (8 * i)) & 0xFF)) } }
-        func le16(_ v: Int) { for i in 0..<2 { out.append(UInt8((v >> (8 * i)) & 0xFF)) } }
-
-        ascii("RIFF"); le32(36 + dataSize); ascii("WAVE")
-        ascii("fmt "); le32(16); le16(1); le16(2)
-        le32(sampleRate); le32(byteRate); le16(4); le16(16)
-        ascii("data"); le32(dataSize)
-
-        for i in 0..<frames {
-            for value in [left[i], right[i]] {
-                let clamped = max(-1.0, min(1.0, value))
-                le16(Int(Int16(clamped * 32767)))
-            }
-        }
-        try out.write(to: url)
     }
 }

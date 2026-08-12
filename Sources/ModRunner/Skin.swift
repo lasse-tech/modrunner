@@ -1,4 +1,5 @@
 import SwiftUI
+import ModRunnerKit
 
 /// The two presentations of the player. They share the model and the replayer
 /// completely; only the view layer differs.

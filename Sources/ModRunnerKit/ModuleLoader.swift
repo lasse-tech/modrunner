@@ -5,9 +5,9 @@ import Foundation
 /// Amiga files rarely carry an extension, so the decision is made on content:
 /// MED modules announce themselves in the first four bytes, ProTracker modules
 /// with a tag at offset 1080.
-enum ModuleLoader {
+public enum ModuleLoader {
 
-    static func load(url: URL) throws -> MMDModule {
+    public static func load(url: URL) throws -> MMDModule {
         let data = try Data(contentsOf: url)
         var module = try load(data: data)
         if module.songName.isEmpty {
@@ -16,7 +16,7 @@ enum ModuleLoader {
         return module
     }
 
-    static func load(data: Data) throws -> MMDModule {
+    public static func load(data: Data) throws -> MMDModule {
         if data.count >= 4 {
             let id = String(decoding: data[0..<4], as: UTF8.self)
             if ["MMD0", "MMD1", "MMD2", "MMD3"].contains(id) {
@@ -37,7 +37,7 @@ enum ModuleLoader {
     }
 
     /// Cheap sniff for the playlist, without reading the whole file.
-    static func looksLikeModule(_ url: URL) -> Bool {
+    public static func looksLikeModule(_ url: URL) -> Bool {
         guard let handle = try? FileHandle(forReadingFrom: url) else { return false }
         defer { try? handle.close() }
 

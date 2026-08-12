@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import ModRunnerKit
 
 /// The window is built by hand rather than through a SwiftUI `Window` scene.
 /// The Amiga title bar replaces the macOS one, and a scene that has its standard
@@ -82,6 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     func applicationDidFinishLaunching(_ notification: Notification) {
         buildMenu()
         buildWindow()
+        Task { @MainActor in MediaKeys.shared.start() }
 
         // Files handed over on the command line, e.g. from `open --args`.
         let paths = CommandLine.arguments.dropFirst().filter { !$0.hasPrefix("-") }
@@ -337,7 +339,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         // AppKit's own full-screen item. The player window is a fixed size and
         // refuses macOS full screen, so it only sits there greyed out next to
         // the one that actually opens the stage.
-        for item in menu.items where item.action == Selector(("toggleFullScreen:")) {
+        for item in menu.items where item.action == #selector(NSWindow.toggleFullScreen(_:)) {
             menu.removeItem(item)
         }
     }

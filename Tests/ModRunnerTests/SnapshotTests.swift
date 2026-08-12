@@ -1,6 +1,7 @@
 import XCTest
 import SwiftUI
 @testable import ModRunner
+@testable import ModRunnerKit
 
 /// Renders the interface offscreen, so layout can be inspected without opening
 /// a window or capturing the screen.
@@ -189,6 +190,27 @@ final class SnapshotTests: XCTestCase {
             .background(Color(nsColor: .windowBackgroundColor))
 
         try write(view, to: directory.appendingPathComponent("waveform-native.png"))
+    }
+
+    /// The ripple field, at panel size and again large, since it is meant to
+    /// carry a whole screen as well as a corner of the window.
+    func testRenderRipple() throws {
+        let directory = try outputDirectory()
+
+        // Two summed sines: a recognisable trace with a slow and a fast part.
+        let samples = (0..<320).map { i -> Float in
+            let t = Double(i) / 320
+            return Float(0.55 * sin(t * .pi * 4) + 0.25 * sin(t * .pi * 17))
+        }
+        let levels: [Float] = [0.82, 0.44, 0.63, 0.7]
+
+        try write(RippleView(samples: samples, levels: levels)
+                    .frame(width: VisualizerView.width, height: VisualizerView.height),
+                  to: directory.appendingPathComponent("ripple-panel.png"))
+
+        try write(RippleView(samples: samples, levels: levels)
+                    .frame(width: 900, height: 380),
+                  to: directory.appendingPathComponent("ripple-large.png"))
     }
 
     func testRenderNativeMeters() throws {

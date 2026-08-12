@@ -96,10 +96,6 @@
 "about.formats.protracker.prefix"  = "ProTracker";
 "about.formats.protracker.suffix"  = ", derselbe Replayer";
 "about.formats.note"               = ".med als MMD0 und MMD1; MMD2 und MMD3 werden erkannt und gemeldet, aber nicht gespielt";
-"about.accuracy"          = "GENAUIGKEIT ggü. LIBXMP";
-"about.accuracy.envelope" = "Hüllkurven-Korrelation";
-"about.accuracy.lag"      = "Bester Versatz";
-"about.accuracy.duration" = "Dauer";
 "about.credits"             = "AUFGEBAUT AUF DER ARBEIT VON";
 "about.credit.kinnunen"     = "MED, OctaMED und die Formatspezifikation";
 "about.credit.wiles"        = "Das Handbuch zu OctaMED SoundStudio";
@@ -119,3 +115,4 @@
 "menu.recent"        = "Zuletzt gespielt";
 "menu.recent.clear"  = "Liste löschen";
 "menu.recent.empty"  = "Noch nichts";
+"visualizer.ripple" = "Wellenfeld";

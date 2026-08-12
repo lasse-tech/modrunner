@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import ModRunnerKit
 
 /// Settings are deliberately system-native rather than skinned: Cmd-, is a
 /// macOS habit, and a Workbench-styled dialog would be the one place the

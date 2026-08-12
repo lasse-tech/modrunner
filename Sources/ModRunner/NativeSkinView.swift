@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import ModRunnerKit
 
 /// The contemporary macOS presentation: system materials and typography, SF
 /// Symbols, and the ModRunner palette for anything that carries meaning.

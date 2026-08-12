@@ -1,4 +1,5 @@
 import SwiftUI
+import ModRunnerKit
 
 /// The ways the audio can be drawn. Adding another one means adding a case, a
 /// title, and a branch in `VisualizerView` — nothing else in the app needs to
@@ -8,6 +9,8 @@ enum VisualizerStyle: String, CaseIterable, Identifiable {
     case bars
     /// An oscilloscope of the mixed output.
     case waveform
+    /// Concentric rings deformed by the mix, seen at a shallow angle.
+    case ripple
 
     var id: String { rawValue }
 
@@ -15,6 +18,7 @@ enum VisualizerStyle: String, CaseIterable, Identifiable {
         switch self {
         case .bars: return L10n.t("visualizer.levels")
         case .waveform: return L10n.t("visualizer.waveform")
+        case .ripple: return L10n.t("visualizer.ripple")
         }
     }
 
@@ -22,6 +26,7 @@ enum VisualizerStyle: String, CaseIterable, Identifiable {
         switch self {
         case .bars: return "chart.bar.fill"
         case .waveform: return "waveform"
+        case .ripple: return "circle.circle"
         }
     }
 
@@ -58,6 +63,8 @@ struct VisualizerView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             case .waveform:
                 WaveformView(samples: samples)
+            case .ripple:
+                RippleView(samples: samples, levels: levels)
             }
         }
         .frame(width: Self.width, height: Self.height, alignment: .bottom)

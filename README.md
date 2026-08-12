@@ -84,6 +84,28 @@ open build/ModRunner.app --args ~/path/to/modules
 Modules can be dropped onto the window, opened from the Finder, or passed on the
 command line — individually or as a whole folder.
 
+## Command line
+
+The engine is a library (`ModRunnerKit`), and `modrunner` is a second front end
+on top of it — scriptable, and usable where there is no window server:
+
+```sh
+modrunner info   <module>...             format, size, instruments, duration
+modrunner render <module> -o out.wav     16-bit stereo WAV; -o - writes to stdout
+modrunner dump   <module> [--block N]    pattern data as text
+modrunner play   <module>...             live, needs an audio device
+```
+
+`info`, `render` and `dump` need nothing but a filesystem, so a collection can be
+swept in a shell loop or in CI; a module that fails to load is a non-zero exit
+code. `play` needs a logged-in session with an output device and says so plainly
+when it has none.
+
+```sh
+make cli                                     # build it
+make info MODULE="Examples/Happy Hour.med"   # or run it through make
+```
+
 ## Examples
 
 `Examples/` holds four MED modules from 1993 by the author of this repository,

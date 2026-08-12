@@ -1,12 +1,12 @@
 import Foundation
 
-enum MMDLoadError: LocalizedError {
+public enum MMDLoadError: LocalizedError {
     case tooShort
     case unknownFormat(String)
     case unsupportedFormat(String)
     case corrupt(String)
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .tooShort:
             return L10n.t("error.tooShort")
@@ -26,11 +26,11 @@ enum MMDLoadError: LocalizedError {
 /// pointers rather than through hardcoded offsets, so that is what we do. Every
 /// pointer is bounds-checked; a truncated module fails cleanly instead of
 /// reading garbage.
-struct MMDLoader {
+public struct MMDLoader {
 
     private let bytes: [UInt8]
 
-    static func load(url: URL) throws -> MMDModule {
+    public static func load(url: URL) throws -> MMDModule {
         let data = try Data(contentsOf: url)
         var module = try MMDLoader(bytes: [UInt8](data)).parse()
         if module.songName.isEmpty {
@@ -39,7 +39,7 @@ struct MMDLoader {
         return module
     }
 
-    static func load(data: Data) throws -> MMDModule {
+    public static func load(data: Data) throws -> MMDModule {
         try MMDLoader(bytes: [UInt8](data)).parse()
     }
 

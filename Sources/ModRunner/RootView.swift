@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import ModRunnerKit
 
 /// Chooses the presentation and keeps the window sized and dressed to match it.
 /// Both skins observe the same `PlayerModel`, so switching between them mid-song

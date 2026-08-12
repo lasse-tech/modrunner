@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import ModRunnerKit
 
 /// The opposite end of the stage: a strip that stays out of the way while
 /// something else has the screen. Title, transport, level, and nothing else.

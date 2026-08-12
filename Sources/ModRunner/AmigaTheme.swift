@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import ModRunnerKit
 
 /// The AmigaOS 3.x Workbench look: the default eight-colour palette, chunky
 /// two-pixel bevels and a topaz-style monospaced face.

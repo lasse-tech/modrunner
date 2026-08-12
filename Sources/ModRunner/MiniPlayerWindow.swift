@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import ModRunnerKit
 
 /// Shows and hides the mini player. While it is up the main window is put away:
 /// the point of the strip is that it is the only thing ModRunner has on screen.
@@ -19,6 +20,7 @@ final class MiniPlayerController {
 
     func present() {
         guard window == nil else { return }
+        StageController.shared.dismiss()
 
         let size = NSSize(width: MiniPlayerView.width, height: MiniPlayerView.height)
         let window = ModRunnerWindow(contentRect: NSRect(origin: .zero, size: size),

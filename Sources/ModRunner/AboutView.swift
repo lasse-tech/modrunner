@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import ModRunnerKit
 
 /// The brand mark: six bars in the Fibonacci ratio 1 : 2 : 3 : 5 : 8 : 13, each
 /// divided into exactly that many segments. Drawn rather than loaded, so it is
@@ -64,6 +65,10 @@ struct AboutView: View {
     var onClose: () -> Void = {}
     var onLicences: () -> Void = {}
 
+    /// Read so the panel is rebuilt when the language changes: the window is
+    /// reused, and L10n is fetched imperatively where SwiftUI cannot see it.
+    @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.system.rawValue
+
     var body: some View {
         VStack(spacing: 0) {
             masthead
@@ -75,6 +80,7 @@ struct AboutView: View {
         .frame(width: About.width)
         .background(About.card)
         .foregroundStyle(About.text)
+        .id(language)
     }
 
     // MARK: - Masthead
@@ -156,33 +162,21 @@ struct AboutView: View {
     // MARK: - Formats and accuracy
 
     private var columns: some View {
-        HStack(alignment: .top, spacing: 32) {
-            VStack(alignment: .leading, spacing: 14) {
-                sectionLabel(L10n.t("about.formats"))
-                VStack(alignment: .leading, spacing: 9) {
-                    format(L10n.t("about.formats.octamed.prefix"), ".med",
-                           L10n.t("about.formats.octamed.suffix"))
-                    format(L10n.t("about.formats.protracker.prefix"), ".mod",
-                           L10n.t("about.formats.protracker.suffix"))
-                    Text(L10n.t("about.formats.note"))
-                        .font(.system(size: 13))
-                        .foregroundStyle(About.subdued)
-                        .lineSpacing(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+        VStack(alignment: .leading, spacing: 14) {
+            sectionLabel(L10n.t("about.formats"))
+            VStack(alignment: .leading, spacing: 9) {
+                format(L10n.t("about.formats.octamed.prefix"), ".med",
+                       L10n.t("about.formats.octamed.suffix"))
+                format(L10n.t("about.formats.protracker.prefix"), ".mod",
+                       L10n.t("about.formats.protracker.suffix"))
+                Text(L10n.t("about.formats.note"))
+                    .font(.system(size: 13))
+                    .foregroundStyle(About.subdued)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            VStack(alignment: .leading, spacing: 14) {
-                sectionLabel(L10n.t("about.accuracy"))
-                VStack(alignment: .leading, spacing: 9) {
-                    measurement(L10n.t("about.accuracy.envelope"), "0.985", highlighted: true)
-                    measurement(L10n.t("about.accuracy.lag"), "0 ms")
-                    measurement(L10n.t("about.accuracy.duration"), "207.0 s / 207.4 s")
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 40)
         .padding(.vertical, 32)
     }
@@ -202,17 +196,6 @@ struct AboutView: View {
             .font(.system(size: 13))
             .foregroundStyle(About.text)
             .lineSpacing(2)
-    }
-
-    private func measurement(_ label: String, _ value: String, highlighted: Bool = false) -> some View {
-        HStack(spacing: 12) {
-            Text(label)
-                .foregroundStyle(About.subdued)
-            Spacer(minLength: 0)
-            Text(value)
-                .foregroundStyle(highlighted ? Brand.orange : About.text)
-        }
-        .font(About.mono(12))
     }
 
     // MARK: - Credits
@@ -350,18 +333,13 @@ final class AboutController {
         window?.orderOut(nil)
     }
 
-    /// The notices live next to the sources rather than inside the bundle, so
-    /// this opens whichever copy the running build can find.
+    /// The notices as published, rather than a copy that may or may not sit
+    /// next to the running app.
+    private static let noticesURL = URL(
+        string: "https://github.com/lasse-tech/modrunner/blob/main/THIRD-PARTY-NOTICES.md")
+
     private static func openLicences() {
-        let candidates = [
-            Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/THIRD-PARTY-NOTICES.md"),
-            URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-                .appendingPathComponent("THIRD-PARTY-NOTICES.md"),
-        ]
-        if let url = candidates.first(where: { FileManager.default.fileExists(atPath: $0.path) }) {
-            NSWorkspace.shared.open(url)
-        } else if let url = URL(string: "https://www.apache.org/licenses/LICENSE-2.0") {
-            NSWorkspace.shared.open(url)
-        }
+        guard let noticesURL else { return }
+        NSWorkspace.shared.open(noticesURL)
     }
 }

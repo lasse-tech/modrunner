@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 import UniformTypeIdentifiers
+import ModRunnerKit
 
 /// Glue between the replayer and the interface.
 @MainActor
@@ -64,6 +65,7 @@ final class PlayerModel: ObservableObject {
     private let replayer = Replayer()
     private lazy var audio = AudioOutput(replayer: replayer)
     private var timer: AnyCancellable?
+    private var previousElapsed: Double = 0
 
     init() {
         replayer.gain = Float(volume)
@@ -84,6 +86,13 @@ final class PlayerModel: ObservableObject {
         if wasPlaying, new.hasEnded, !new.isPlaying {
             playNext(autoAdvance: true)
         }
+
+        // Once a second is enough for the Now Playing tile, and it keeps the
+        // 60 Hz poll cheap.
+        if Int(new.elapsedSeconds) != Int(previousElapsed) || wasPlaying != new.isPlaying {
+            MediaKeys.shared.update()
+        }
+        previousElapsed = new.elapsedSeconds
     }
 
     // MARK: - Loading

@@ -8,7 +8,7 @@ import AVFoundation
 /// 300 ms, which is more than two pattern lines. Since the user can change
 /// device mid-song, the engine's configuration is watched and the latency —
 /// and, if the hardware rate changed with it, the whole graph — is rebuilt.
-final class AudioOutput {
+public final class AudioOutput {
 
     private let engine = AVAudioEngine()
     private let replayer: Replayer
@@ -18,13 +18,13 @@ final class AudioOutput {
     private(set) var isRunning = false
 
     /// Frames requested by the last render call, for the latency diagnostic.
-    nonisolated(unsafe) static var observedRenderFrames = 0
+    public nonisolated(unsafe) static var observedRenderFrames = 0
 
     private var debugging: Bool {
         ProcessInfo.processInfo.environment["MODRUNNER_AUDIO_DEBUG"] == "1"
     }
 
-    init(replayer: Replayer) {
+    public init(replayer: Replayer) {
         self.replayer = replayer
     }
 
@@ -36,7 +36,7 @@ final class AudioOutput {
 
     // MARK: - Lifecycle
 
-    func start() throws {
+    public func start() throws {
         guard !isRunning else {
             // Latency can change without the graph being rebuilt — a Bluetooth
             // codec switch, for one — so refresh it whenever playback starts.
@@ -59,7 +59,7 @@ final class AudioOutput {
         }
     }
 
-    func stop() {
+    public func stop() {
         guard isRunning else { return }
         engine.stop()
         teardownNode()

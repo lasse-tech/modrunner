@@ -8,7 +8,7 @@ import Foundation
 /// Paula voices playing 8-bit samples at a period. The differences that do
 /// matter are the effect command meanings, which is why the module carries an
 /// `effectDialect`.
-struct MODLoader {
+public struct MODLoader {
 
     private let bytes: [UInt8]
 
@@ -21,13 +21,13 @@ struct MODLoader {
         "20CH": 20, "24CH": 24, "28CH": 28, "32CH": 32,
     ]
 
-    static func signature(in data: Data) -> String? {
+    public static func signature(in data: Data) -> String? {
         guard data.count >= 1084 else { return nil }
         let tag = String(decoding: data[1080..<1084], as: UTF8.self)
         return signatures[tag] != nil ? tag : nil
     }
 
-    static func load(url: URL) throws -> MMDModule {
+    public static func load(url: URL) throws -> MMDModule {
         var module = try load(data: try Data(contentsOf: url))
         if module.songName.isEmpty {
             module.songName = url.deletingPathExtension().lastPathComponent
@@ -35,7 +35,7 @@ struct MODLoader {
         return module
     }
 
-    static func load(data: Data) throws -> MMDModule {
+    public static func load(data: Data) throws -> MMDModule {
         try MODLoader(bytes: [UInt8](data)).parse()
     }
 
@@ -199,7 +199,7 @@ struct MODLoader {
 
     /// Nearest note for a stored period. Modules written with finetuned samples
     /// hold slightly shifted periods, so an exact match cannot be relied on.
-    static func note(forPeriod period: Int) -> Int {
+    public static func note(forPeriod period: Int) -> Int {
         guard period > 0 else { return 0 }
         var bestIndex = 0
         var bestDistance = Int.max

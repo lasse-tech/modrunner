@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import ModRunnerKit
 
 struct AmigaSkinView: View {
 
@@ -27,9 +28,10 @@ struct AmigaSkinView: View {
                 title: titleBarText,
                 onClose: { keyWindow?.performClose(nil) },
                 onMinimise: { keyWindow?.miniaturize(nil) },
-                // The Amiga zoom gadget flipped between two window sizes; ours
-                // are "with tracker" and "without".
-                onZoom: { showTracker.toggle() },
+                // The zoom gadget opens the full-screen stage, so both skins
+                // reach it the same way: green gadget in the native window,
+                // zoom gadget here. The tracker panel is the Spuren button.
+                onZoom: { ViewOptions.toggleStage() },
                 onDepth: { keyWindow?.orderBack(nil) }
             )
 
@@ -47,6 +49,7 @@ struct AmigaSkinView: View {
                 AmigaViewOptions(model: model)
                 playlistPanel
             }
+            .frame(maxHeight: .infinity)
             .padding(8)
             .background(Amiga.grey)
         }
@@ -184,8 +187,7 @@ struct AmigaSkinView: View {
                     }
                 }
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 88)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .amigaBevel(.recessed, fill: Amiga.lightGrey, inset: Amiga.bevel + 1)
 
             AmigaReadout(text: model.status, color: Amiga.black)

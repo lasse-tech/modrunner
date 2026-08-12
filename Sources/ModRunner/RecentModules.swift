@@ -1,4 +1,5 @@
 import Foundation
+import ModRunnerKit
 
 /// The modules that were played most recently, for the File menu.
 ///

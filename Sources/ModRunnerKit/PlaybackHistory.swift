@@ -1,18 +1,18 @@
 import Foundation
 
 /// What the replayer was doing at a given point on the rendered-sample timeline.
-struct PlaybackPosition {
-    var renderedSamples: Double = 0
-    var sequencePosition = 0
-    var block = 0
-    var line = 0
-    var lineProgress = 0.0
-    var lineCount = 64
-    var tempo = 33
-    var ticksPerLine = 6
-    var elapsedSeconds = 0.0
-    var linesPlayed = 0
-    var channelPeaks: [Float] = []
+public struct PlaybackPosition {
+    public var renderedSamples: Double = 0
+    public var sequencePosition = 0
+    public var block = 0
+    public var line = 0
+    public var lineProgress = 0.0
+    public var lineCount = 64
+    public var tempo = 33
+    public var ticksPerLine = 6
+    public var elapsedSeconds = 0.0
+    public var linesPlayed = 0
+    public var channelPeaks: [Float] = []
 }
 
 /// A ring of recent playback positions, and a ring of the audio that went with
@@ -24,7 +24,7 @@ struct PlaybackPosition {
 /// would therefore show the interface running ahead of the music. Instead the
 /// replayer records where it was as it renders, and the interface asks what was
 /// happening one output-latency ago.
-final class PlaybackHistory {
+public final class PlaybackHistory {
 
     private var positions: [PlaybackPosition]
     private var writeIndex = 0
@@ -38,14 +38,14 @@ final class PlaybackHistory {
     /// Total frames rendered since the history was reset.
     private(set) var renderedSamples: Double = 0
 
-    init(positionCapacity: Int = 1024, audioCapacity: Int = 1 << 16) {
+    public init(positionCapacity: Int = 1024, audioCapacity: Int = 1 << 16) {
         positions = Array(repeating: PlaybackPosition(), count: positionCapacity)
         audio = Array(repeating: 0, count: audioCapacity)
         audioMask = audioCapacity - 1
         precondition(audioCapacity & audioMask == 0, "audio capacity must be a power of two")
     }
 
-    func reset() {
+    public func reset() {
         writeIndex = 0
         count = 0
         renderedSamples = 0
@@ -54,7 +54,7 @@ final class PlaybackHistory {
     }
 
     /// Records the state at the end of a rendered chunk.
-    func record(_ position: PlaybackPosition) {
+    public func record(_ position: PlaybackPosition) {
         var entry = position
         entry.renderedSamples = renderedSamples
         positions[writeIndex] = entry
@@ -62,20 +62,20 @@ final class PlaybackHistory {
         count = min(count + 1, positions.count)
     }
 
-    func advance(frames: Int) {
+    public func advance(frames: Int) {
         renderedSamples += Double(frames)
     }
 
     /// Appends one mixed frame to the audio ring.
     @inline(__always)
-    func appendAudio(_ sample: Float) {
+    public func appendAudio(_ sample: Float) {
         audio[audioWrite & audioMask] = sample
         audioWrite += 1
     }
 
     /// The most recent recorded position at or before `renderedSamples - delay`.
     /// Returns nil while nothing has been recorded yet.
-    func position(delayedBy delaySamples: Double) -> PlaybackPosition? {
+    public func position(delayedBy delaySamples: Double) -> PlaybackPosition? {
         guard count > 0 else { return nil }
         let target = renderedSamples - max(0, delaySamples)
 
@@ -93,7 +93,7 @@ final class PlaybackHistory {
 
     /// Peak per channel over a short window ending at the delayed position, so
     /// meters read steadily instead of flickering on single chunks.
-    func peaks(delayedBy delaySamples: Double, window: Double) -> [Float] {
+    public func peaks(delayedBy delaySamples: Double, window: Double) -> [Float] {
         guard count > 0 else { return [] }
         let end = renderedSamples - max(0, delaySamples)
         let start = end - window
@@ -117,7 +117,7 @@ final class PlaybackHistory {
 
     /// A window of the mixed output ending one output latency ago, for the
     /// waveform view. Values are ordered oldest to newest.
-    func waveform(delayedBy delaySamples: Double, count sampleCount: Int, stride: Int = 1) -> [Float] {
+    public func waveform(delayedBy delaySamples: Double, count sampleCount: Int, stride: Int = 1) -> [Float] {
         guard sampleCount > 0, audioWrite > 0 else { return [] }
         let span = sampleCount * max(1, stride)
         let end = audioWrite - Int(max(0, delaySamples))

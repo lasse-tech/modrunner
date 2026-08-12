@@ -9,6 +9,7 @@ CONFIG      ?= release
 APP_NAME    := ModRunner
 APP         := build/$(APP_NAME).app
 INSTALL_DIR ?= /Applications
+LSREGISTER  := /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 EXAMPLES    := Examples
 
 # A module to use for `make run` and `make export`.
@@ -19,7 +20,7 @@ SECONDS     ?= 30
 WAV         ?= build/export.wav
 
 .DEFAULT_GOAL := help
-.PHONY: help build app run install uninstall associate associations test check export lint lint-fix fmt clean clear distclean
+.PHONY: help build app run install uninstall associate associations test check export cli info render icons lint lint-fix fmt clean clear distclean
 
 ## help: Show this list of targets
 help:
@@ -51,14 +52,15 @@ install: app
 	@echo "Installing $(APP_NAME).app into $(INSTALL_DIR)"
 	rm -rf "$(INSTALL_DIR)/$(APP_NAME).app"
 	cp -R "$(APP)" "$(INSTALL_DIR)/$(APP_NAME).app"
-	@echo "Installed. Launch it from the Finder or with: open -a $(APP_NAME)"
+	@# Launch Services caches document types and their icons per bundle. Without
+	@# this the Finder keeps showing the generic icon on .med and .mod files, and
+	@# the copy in build/ competes with the installed one for the same bundle id.
+	@$(LSREGISTER) -u "$(APP)" 2>/dev/null || true
+	$(LSREGISTER) -f -R "$(INSTALL_DIR)/$(APP_NAME).app"
+	@echo "Installed and registered. Launch it with: open -a $(APP_NAME)"
 
 ## associate: Make ModRunner the default app for .med and .mod files
 associate: install
-	@# Launch Services has to see the installed bundle before it will honour
-	@# the document types declared in it.
-	/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister \
-		-f "$(INSTALL_DIR)/$(APP_NAME).app"
 	swift Scripts/associate.swift
 
 ## associations: Show which app currently opens .med and .mod files
@@ -76,6 +78,25 @@ test:
 
 ## check: Build, test and lint in one go, as CI does
 check: build test lint
+
+## cli: Build the modrunner command-line tool
+cli:
+	swift build -c $(CONFIG) --product modrunner
+	@echo "Built $$(swift build -c $(CONFIG) --show-bin-path)/modrunner"
+
+## info: Print what the CLI knows about MODULE
+info: cli
+	@"$$(swift build -c $(CONFIG) --show-bin-path)/modrunner" info "$(MODULE)"
+
+## render: Render MODULE to WAV through the CLI
+render: cli
+	@mkdir -p "$$(dirname "$(WAV)")"
+	@"$$(swift build -c $(CONFIG) --show-bin-path)/modrunner" render "$(MODULE)" -o "$(WAV)" \
+		$(if $(SECONDS),--seconds $(SECONDS),)
+
+## icons: Rebuild the Finder icons for .med and .mod
+icons:
+	swift Scripts/make-doc-icons.swift
 
 ## export: Render a module to a WAV file for listening
 export:

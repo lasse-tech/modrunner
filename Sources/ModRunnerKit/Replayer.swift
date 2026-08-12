@@ -8,7 +8,9 @@ import Foundation
 ///
 /// Timing follows OctaMED: `ticksPerLine` timing pulses per line, and a tempo
 /// that converts to a ProTracker-style BPM (see `beatsPerMinute`).
-final class Replayer {
+public final class Replayer {
+
+    public init() {}
 
     // MARK: - Tuning constants
 
@@ -31,73 +33,75 @@ final class Replayer {
     // MARK: - Voice state
 
     private struct Voice {
-        var instrument: Int = 0          // 1-based, 0 = none
-        var sampleData: [Float] = []
-        var loopStart: Int = 0
-        var loopLength: Int = 0
-        var isLooping: Bool = false
+        public var instrument: Int = 0          // 1-based, 0 = none
+        public var sampleData: [Float] = []
+        public var loopStart: Int = 0
+        public var loopLength: Int = 0
+        public var isLooping: Bool = false
 
-        var position: Double = 0
-        var step: Double = 0
-        var isActive: Bool = false
+        public var position: Double = 0
+        public var step: Double = 0
+        public var isActive: Bool = false
 
-        var period: Int = 0
-        var targetPeriod: Int = 0        // for tone portamento
-        var portaSpeed: Int = 0
-        var finetune: Int = 0
+        public var period: Int = 0
+        public var targetPeriod: Int = 0        // for tone portamento
+        public var portaSpeed: Int = 0
+        public var finetune: Int = 0
 
-        var volume: Int = 0              // 0...64
-        var trackVolume: Int = 64
+        public var volume: Int = 0              // 0...64
+        public var trackVolume: Int = 64
 
-        var vibratoPos: Int = 0
-        var vibratoSpeed: Int = 0
-        var vibratoDepth: Int = 0
-        var tremoloPos: Int = 0
-        var tremoloSpeed: Int = 0
-        var tremoloDepth: Int = 0
+        public var vibratoPos: Int = 0
+        public var vibratoSpeed: Int = 0
+        public var vibratoDepth: Int = 0
+        public var tremoloPos: Int = 0
+        public var tremoloSpeed: Int = 0
+        public var tremoloDepth: Int = 0
 
-        var arpeggioBase: Int = 0
-        var arpeggioData: Int = 0
+        public var arpeggioBase: Int = 0
+        public var arpeggioData: Int = 0
 
-        var noteDelayTicks: Int = -1     // 0x0F F2/F4/F5, 0x1F level 1
-        var retriggerEvery: Int = 0      // 0x0F F1/F3, 0x1F level 2
-        var cutAtTick: Int = -1          // 0x18
-        var loopLine: Int = 0            // 0x16
-        var loopCount: Int = 0
-        var pendingNote: MMDModule.Note?
+        public var noteDelayTicks: Int = -1     // 0x0F F2/F4/F5, 0x1F level 1
+        public var retriggerEvery: Int = 0      // 0x0F F1/F3, 0x1F level 2
+        public var cutAtTick: Int = -1          // 0x18
+        public var loopLine: Int = 0            // 0x16
+        public var loopCount: Int = 0
+        public var pendingNote: MMDModule.Note?
 
         /// Volume actually applied by the mixer. It chases `volume` over a
         /// millisecond or so: stepping the gain instantly on a note or a set
         /// volume puts a discontinuity in the waveform, which is heard as a
         /// click. Real hardware had the same edge; players smooth it.
-        var rampedVolume: Float = 0
+        public var rampedVolume: Float = 0
 
         /// Peak level since the last UI poll, for the VU meters.
-        var meter: Float = 0
+        public var meter: Float = 0
     }
 
     // MARK: - Public snapshot (read by the UI)
 
-    struct Snapshot {
-        var isPlaying = false
-        var sequencePosition = 0
-        var block = 0
-        var line = 0
+    public struct Snapshot {
+        public init() {}
+
+        public var isPlaying = false
+        public var sequencePosition = 0
+        public var block = 0
+        public var line = 0
         /// How far playback has moved through the current line, 0...1. Lets a
         /// view scroll continuously rather than jumping a whole row at a time.
-        var lineProgress = 0.0
-        var lineCount = 64
-        var tempo = 33
-        var ticksPerLine = 6
-        var beatsPerMinute = 125.0
-        var channelMeters: [Float] = []
-        var channelNotes: [Int] = []
-        var channelInstruments: [Int] = []
-        var elapsedSeconds = 0.0
-        var progress = 0.0
-        var hasEnded = false
+        public var lineProgress = 0.0
+        public var lineCount = 64
+        public var tempo = 33
+        public var ticksPerLine = 6
+        public var beatsPerMinute = 125.0
+        public var channelMeters: [Float] = []
+        public var channelNotes: [Int] = []
+        public var channelInstruments: [Int] = []
+        public var elapsedSeconds = 0.0
+        public var progress = 0.0
+        public var hasEnded = false
         /// Output latency the display is compensating for, in seconds.
-        var outputLatency = 0.0
+        public var outputLatency = 0.0
     }
 
     // MARK: - Stored state
@@ -130,10 +134,10 @@ final class Replayer {
 
     /// 0 = mono, 1 = the hard left/right split of real Amiga hardware, which is
     /// tiring on headphones. 0.45 matches what other players default to.
-    var stereoSeparation: Double = 0.45
+    public var stereoSeparation: Double = 0.45
     /// The listener's volume, 0...1. Full scale here is the loudest setting
     /// that does not distort; the headroom below takes care of that.
-    var gain: Float = 1.0
+    public var gain: Float = 1.0
 
     /// Room for the voices to sum without running out of scale.
     ///
@@ -165,7 +169,7 @@ final class Replayer {
     /// Whether the switchable LED stage is engaged. The fixed RC stage is only
     /// applied when the filter is on at all, so that leaving it off reproduces
     /// exactly what the player did before this existed.
-    var filterEnabled = false {
+    public var filterEnabled = false {
         didSet {
             lock.lock(); defer { lock.unlock() }
             filterLeft.ledEnabled = filterEnabled
@@ -179,25 +183,25 @@ final class Replayer {
     /// unmuting drops back into the music rather than restarting a note.
     private var mutedVoices = Set<Int>()
 
-    func setMuted(_ muted: Bool, channel: Int) {
+    public func setMuted(_ muted: Bool, channel: Int) {
         lock.lock(); defer { lock.unlock() }
         if muted { mutedVoices.insert(channel) } else { mutedVoices.remove(channel) }
     }
 
-    func isMuted(channel: Int) -> Bool {
+    public func isMuted(channel: Int) -> Bool {
         lock.lock(); defer { lock.unlock() }
         return mutedVoices.contains(channel)
     }
 
     /// Reported by the audio device; see PlaybackHistory for why it matters.
-    func setOutputLatency(seconds: Double) {
+    public func setOutputLatency(seconds: Double) {
         lock.lock(); defer { lock.unlock() }
         outputLatencySeconds = max(0, seconds)
     }
 
     // MARK: - Lifecycle
 
-    func prepare(sampleRate: Double) {
+    public func prepare(sampleRate: Double) {
         lock.lock(); defer { lock.unlock() }
         // The history is measured in frames, so a rate change invalidates it.
         if sampleRate != self.sampleRate { history.reset() }
@@ -209,7 +213,7 @@ final class Replayer {
         recomputeTiming()
     }
 
-    func load(module newModule: MMDModule) {
+    public func load(module newModule: MMDModule) {
         lock.lock(); defer { lock.unlock() }
         module = newModule
         voices = (0..<max(4, newModule.numTracks)).map { index in
@@ -225,18 +229,18 @@ final class Replayer {
         recomputeTiming()
     }
 
-    func play() {
+    public func play() {
         lock.lock(); defer { lock.unlock() }
         if songEnded { resetPositionLocked() }
         playing = true
     }
 
-    func pause() {
+    public func pause() {
         lock.lock(); defer { lock.unlock() }
         playing = false
     }
 
-    func stop() {
+    public func stop() {
         lock.lock(); defer { lock.unlock() }
         playing = false
         resetPositionLocked()
@@ -253,7 +257,7 @@ final class Replayer {
     /// loaded before the jump — or nothing at all — so a track could play the
     /// wrong sample entirely. Walking the pattern data costs a fraction of a
     /// millisecond and gets it right.
-    func seek(toSequencePosition position: Int) {
+    public func seek(toSequencePosition position: Int) {
         lock.lock(); defer { lock.unlock() }
         guard !module.playSequence.isEmpty else { return }
         let target = min(max(0, position), module.playSequence.count - 1)
@@ -294,8 +298,8 @@ final class Replayer {
         }
     }
 
-    func nextPosition() { seek(toSequencePosition: currentPosition() + 1) }
-    func previousPosition() { seek(toSequencePosition: currentPosition() - 1) }
+    public func nextPosition() { seek(toSequencePosition: currentPosition() + 1) }
+    public func previousPosition() { seek(toSequencePosition: currentPosition() - 1) }
 
     private func currentPosition() -> Int {
         lock.lock(); defer { lock.unlock() }
@@ -366,7 +370,7 @@ final class Replayer {
     // MARK: - Rendering
 
     /// Fills interleaved-free stereo buffers. Called from the audio thread.
-    func render(left: UnsafeMutablePointer<Float>, right: UnsafeMutablePointer<Float>, frames: Int) {
+    public func render(left: UnsafeMutablePointer<Float>, right: UnsafeMutablePointer<Float>, frames: Int) {
         lock.lock(); defer { lock.unlock() }
 
         for i in 0..<frames { left[i] = 0; right[i] = 0 }
@@ -561,7 +565,7 @@ final class Replayer {
     }
 
     /// Exposed for the limiter test.
-    func softClipForTesting(_ x: Float) -> Float { softClip(x) }
+    public func softClipForTesting(_ x: Float) -> Float { softClip(x) }
 
     /// Rounds off peaks instead of letting them wrap.
     ///
@@ -1180,7 +1184,7 @@ final class Replayer {
 
     // MARK: - UI snapshot
 
-    func snapshot() -> Snapshot {
+    public func snapshot() -> Snapshot {
         lock.lock(); defer { lock.unlock() }
         return snapshotLocked()
     }
@@ -1222,7 +1226,7 @@ final class Replayer {
     }
 
     /// A window of the mixed output as it is being heard, for the waveform view.
-    func waveform(sampleCount: Int, stride: Int = 4) -> [Float] {
+    public func waveform(sampleCount: Int, stride: Int = 4) -> [Float] {
         lock.lock(); defer { lock.unlock() }
         return history.waveform(delayedBy: outputLatencySamples,
                                 count: sampleCount, stride: stride)
@@ -1235,7 +1239,7 @@ final class Replayer {
     /// it, the audio thread may have to wait, and a late buffer is heard as a
     /// crackle. Asking for the position and the waveform separately doubled the
     /// number of chances for that to happen, sixty times a second.
-    func uiState(waveformSamples: Int, waveformStride: Int = 4) -> (Snapshot, [Float]) {
+    public func uiState(waveformSamples: Int, waveformStride: Int = 4) -> (Snapshot, [Float]) {
         lock.lock(); defer { lock.unlock() }
         let snap = snapshotLocked()
         let wave = history.waveform(delayedBy: outputLatencySamples,

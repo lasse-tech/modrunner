@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import ModRunnerKit
 
 /// Keys the stage answers to. The window turns key codes into these so the view
 /// does not have to know anything about AppKit events.
@@ -57,6 +58,9 @@ final class StageController {
 
     func present() {
         guard window == nil else { return }
+        // The mini player and the stage are two answers to the same question,
+        // so opening one puts the other away.
+        MiniPlayerController.shared.dismiss()
         guard let screen = NSApp.keyWindow?.screen ?? NSScreen.main ?? NSScreen.screens.first else { return }
 
         let window = StageWindow(contentRect: screen.frame,
