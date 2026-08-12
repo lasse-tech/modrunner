@@ -38,7 +38,9 @@ final class Win32Window: WindowBackend {
             windowClass.lpfnWndProc = Win32Window.procedure
             windowClass.hInstance = instance
             windowClass.lpszClassName = UnsafePointer(classBuffer.baseAddress!)
-            windowClass.hCursor = LoadCursorW(nil, IDC_ARROW)
+            // IDC_ARROW is MAKEINTRESOURCE(32512), a macro Swift does not
+            // import: the resource id goes in as a pointer bit pattern.
+            windowClass.hCursor = LoadCursorW(nil, UnsafePointer<WCHAR>(bitPattern: 32_512))
 
             // A class that is already registered is not an error: it is the
             // second window this process has opened.
@@ -49,6 +51,9 @@ final class Win32Window: WindowBackend {
 
         // CreateWindow takes the outer size, and the canvas has to fit the
         // client area, so the frame is measured and added on.
+        // The window styles come through as differently signed integers, so
+        // they are widened before being combined rather than after.
+        let style = DWORD(WS_OVERLAPPEDWINDOW) | DWORD(WS_VISIBLE)
         var frame = RECT(left: 0, top: 0, right: LONG(width), bottom: LONG(height))
         _ = AdjustWindowRect(&frame, DWORD(WS_OVERLAPPEDWINDOW), false)
 
@@ -56,8 +61,7 @@ final class Win32Window: WindowBackend {
         var wideClassName = Array(className.utf16) + [0]
         let created: HWND? = wideClassName.withUnsafeBufferPointer { classBuffer in
             wideTitle.withUnsafeBufferPointer { titleBuffer in
-                CreateWindowExW(0, classBuffer.baseAddress, titleBuffer.baseAddress,
-                                DWORD(WS_OVERLAPPEDWINDOW | WS_VISIBLE),
+                CreateWindowExW(0, classBuffer.baseAddress, titleBuffer.baseAddress, style,
                                 Int32(CW_USEDEFAULT), Int32(CW_USEDEFAULT),
                                 frame.right - frame.left, frame.bottom - frame.top,
                                 nil, nil, instance, nil)
