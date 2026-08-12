@@ -388,10 +388,26 @@ final class Replayer {
                     guard i0 >= 0, i0 < count else { voices[index].isActive = false; break }
                     let frac = Float(position - Double(i0))
 
+                    // Neighbours for the interpolation must wrap around the loop
+                    // once playback is inside it, in both directions. Reading
+                    // straight off the ends instead pulls in the sample before
+                    // the loop start — part of the attack, unrelated to the
+                    // waveform at the loop end — which puts a step into the
+                    // signal on every pass round the loop.
+                    let span = loopEnd - loopStart
+                    let insideLoop = looping && span > 0 && i0 >= loopStart
+
                     func sample(at index: Int) -> Float {
                         var i = index
-                        if i < 0 { i = looping ? loopEnd + i : 0 }
-                        if i >= count { i = looping ? loopStart + (i - loopEnd) : count - 1 }
+                        if insideLoop {
+                            if i < loopStart {
+                                i = loopEnd - ((loopStart - i - 1) % span) - 1
+                            } else if i >= loopEnd {
+                                i = loopStart + ((i - loopEnd) % span)
+                            }
+                        } else {
+                            i = max(0, min(count - 1, i))
+                        }
                         return (i >= 0 && i < count) ? samples[i] : 0
                     }
 
@@ -1055,7 +1071,10 @@ final class Replayer {
 
     func snapshot() -> Snapshot {
         lock.lock(); defer { lock.unlock() }
+        return snapshotLocked()
+    }
 
+    private func snapshotLocked() -> Snapshot {
         var snap = Snapshot()
         snap.isPlaying = playing
         snap.hasEnded = songEnded
@@ -1096,5 +1115,20 @@ final class Replayer {
         lock.lock(); defer { lock.unlock() }
         return history.waveform(delayedBy: outputLatencySamples,
                                 count: sampleCount, stride: stride)
+    }
+
+    /// Everything the interface needs, taken under a single acquisition of the
+    /// lock.
+    ///
+    /// The render callback holds this same lock. Every time the interface takes
+    /// it, the audio thread may have to wait, and a late buffer is heard as a
+    /// crackle. Asking for the position and the waveform separately doubled the
+    /// number of chances for that to happen, sixty times a second.
+    func uiState(waveformSamples: Int, waveformStride: Int = 4) -> (Snapshot, [Float]) {
+        lock.lock(); defer { lock.unlock() }
+        let snap = snapshotLocked()
+        let wave = history.waveform(delayedBy: outputLatencySamples,
+                                    count: waveformSamples, stride: waveformStride)
+        return (snap, wave)
     }
 }

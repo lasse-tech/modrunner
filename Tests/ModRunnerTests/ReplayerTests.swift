@@ -280,6 +280,52 @@ final class ReplayerTests: XCTestCase {
         XCTAssertEqual(replayer.softClipForTesting(2.0), -replayer.softClipForTesting(-2.0), accuracy: 0.0001)
     }
 
+    /// The interpolation must wrap around the loop rather than reading off the
+    /// ends, or every pass round the loop puts a step into the signal.
+    func testLoopedSampleHasNoSeamDiscontinuity() throws {
+        // A pure sine whose loop is a whole number of cycles: a correct loop is
+        // seamless, so any step at the seam is the interpolator's doing.
+        var module = MMDModule()
+        module.numTracks = 4
+        module.ticksPerLine = 6
+        module.defaultTempo = 33
+        module.trackVolumes = Array(repeating: 64, count: 16)
+
+        let cycles = 8, period = 64
+        let length = cycles * period
+        var instrument = MMDModule.Instrument()
+        instrument.data = (0..<length).map { sinf(Float($0) / Float(period) * 2 * .pi) }
+        instrument.volume = 64
+        instrument.repeatStart = 0
+        instrument.repeatLength = length
+        module.instruments = [instrument]
+        XCTAssertTrue(instrument.isLooping)
+
+        var block = MMDModule.Block()
+        block.tracks = 4
+        block.lines = 64
+        var notes = [MMDModule.Note](repeating: MMDModule.Note(), count: 4 * 64)
+        notes[0] = MMDModule.Note(note: 13, instrument: 1, command: 0, data: 0)
+        block.notes = notes
+        module.blocks = [block]
+        module.playSequence = [0]
+
+        let (left, _) = render(module: module, seconds: 3)
+
+        // The loop is many passes long at this rate; a seam glitch shows up as a
+        // sample-to-sample jump far larger than the sine's own slope.
+        var largestStep: Float = 0
+        var previous = left[0]
+        for i in 1..<left.count {
+            largestStep = max(largestStep, abs(left[i] - previous))
+            previous = left[i]
+        }
+        let peak = left.map(abs).max() ?? 0
+        XCTAssertGreaterThan(peak, 0.01, "the test tone did not play")
+        XCTAssertLessThan(largestStep, peak * 0.35,
+                          "step of \(largestStep) against a peak of \(peak) — the loop seam clicks")
+    }
+
     func testWaveformFollowsTheDelayedOutput() throws {
         let url = moduleURL("Happy Hour")
         try skipIfMissing(url)

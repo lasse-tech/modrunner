@@ -41,10 +41,10 @@ final class PlayerModel: ObservableObject {
     // MARK: - Polling
 
     private func poll() {
-        let new = replayer.snapshot()
+        let (new, wave) = replayer.uiState(waveformSamples: 320)
         let wasPlaying = snapshot.isPlaying
         snapshot = new
-        waveform = replayer.waveform(sampleCount: 320, stride: 4)
+        waveform = wave
         // Roll on to the next module when this one runs out.
         if wasPlaying, new.hasEnded, !new.isPlaying {
             playNext(autoAdvance: true)
