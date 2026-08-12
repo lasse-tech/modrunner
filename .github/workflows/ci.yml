@@ -2,7 +2,11 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    # The port to Linux and Windows lives on a branch, and it is the work that
+    # most needs CI: none of it can be tried out on the machine it is written
+    # on. Waiting for a pull request to find out whether it compiles on three
+    # platforms would be the wrong way round.
+    branches: [main, master, 'port/**']
   pull_request:
 
 jobs:
