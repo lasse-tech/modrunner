@@ -10,6 +10,7 @@ usage:
   modrunner dump   <module> [--block N]        pattern data as text
   modrunner play   <module>...                 play through the audio device
   modrunner screenshot <module> -o <file.png>  draw the Workbench interface
+  modrunner window <module>...                 the Workbench player in a window
 
 options:
   -o, --output <file>   where render writes; - writes the WAV to stdout
@@ -24,7 +25,7 @@ options:
 Exit codes: 0 success, 1 a module failed to load, 2 no audio device.
 """
 
-let commands: Set<String> = ["info", "render", "dump", "play", "screenshot"]
+let commands: Set<String> = ["info", "render", "dump", "play", "screenshot", "window"]
 let raw = Array(CommandLine.arguments.dropFirst())
 
 if raw.isEmpty || raw.contains("-h") || raw.contains("--help") {
@@ -41,6 +42,7 @@ do {
     case "dump":   status = try Commands.dump(arguments)
     case "play":   status = try Commands.play(arguments)
     case "screenshot": status = try Screenshot.run(arguments)
+    case "window": status = try WindowPlayer.run(arguments)
     default:       status = 1        // unreachable: the parser checks the set
     }
     exit(status)

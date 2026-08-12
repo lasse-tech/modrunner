@@ -64,6 +64,7 @@ public enum PlayerScreenRenderer {
     private static let meterRowHeight = 16
     private static let positionHeight = 34
     private static let transportHeight = 32
+    private static let transportButtonWidth = 34
     private static let viewOptionsHeight = 30
     private static let playlistRowHeight = 12
     private static let trackerRowHeight = 10
@@ -96,32 +97,109 @@ public enum PlayerScreenRenderer {
         return Workbench.bevel * 2 + 4 + Font.cellHeight + 2 + list + 4 + 18 + 4
     }
 
-    public static func render(_ screen: PlayerScreen) -> Canvas {
-        var canvas = Canvas(width: width, height: height(for: screen), fill: Workbench.grey)
-        var y = 0
-
-        y = titleBar(&canvas, screen, y: y)
-        y += margin
-
-        let content = Rect(margin, y, width - margin * 2, 0)
-
-        y = song(&canvas, screen, Rect(content.x, y, content.width, songHeight)) + gap
-        y = status(&canvas, screen, Rect(content.x, y, content.width, statusHeight)) + gap
-
-        if screen.showTracker {
-            let panel = Rect(content.x, y, content.width,
-                             trackerPanelHeight(rows: screen.trackerRows.count))
-            y = tracker(&canvas, screen, panel) + gap
+    /// A control the user can hit, and what it is for.
+    ///
+    /// The skin draws; it does not handle input. But it is the only thing that
+    /// knows where it put the play button, so it says — and the window layer
+    /// asks. That keeps one description of the layout instead of two that
+    /// drift until the buttons stop matching their hit boxes.
+    public struct Control {
+        public enum Role {
+            case previousModule, previousPosition, playPause, stop, nextPosition, nextModule
+            case tracker, songPosition
         }
 
-        let metersPanel = Rect(content.x, y, content.width,
-                               metersHeight(channels: screen.meters.count))
-        y = meters(&canvas, screen, metersPanel) + gap
-        y = songPosition(&canvas, screen, Rect(content.x, y, content.width, positionHeight)) + gap
-        y = transport(&canvas, screen, Rect(content.x, y, content.width, transportHeight)) + gap
-        y = viewOptions(&canvas, screen, Rect(content.x, y, content.width, viewOptionsHeight)) + gap
-        _ = playlist(&canvas, screen,
-                     Rect(content.x, y, content.width, playlistHeight(rows: screen.playlist.count)))
+        public let rect: Rect
+        public let role: Role
+    }
+
+    public static func controls(for screen: PlayerScreen) -> [Control] {
+        let stack = panels(for: screen)
+        var controls: [Control] = []
+
+        let transport = stack.transport.inset(by: Workbench.bevel + 2)
+        let roles: [Control.Role] = [.previousModule, .previousPosition, .playPause,
+                                     .stop, .nextPosition, .nextModule]
+        for (index, role) in roles.enumerated() {
+            controls.append(Control(rect: Rect(transport.x + index * (transportButtonWidth + 4),
+                                               transport.y, transportButtonWidth, transport.height),
+                                    role: role))
+        }
+
+        let position = stack.songPosition.inset(by: Workbench.bevel + 2)
+        controls.append(Control(rect: Rect(position.x, position.y + Font.cellHeight + 2,
+                                           position.width, position.height - Font.cellHeight - 2),
+                                role: .songPosition))
+
+        let options = stack.viewOptions.inset(by: Workbench.bevel + 2)
+        controls.append(Control(rect: Rect(options.x + 5 * Font.cellWidth, options.y,
+                                           66, options.height),
+                                role: .tracker))
+        return controls
+    }
+
+    /// Where each panel sits. The renderer and the hit testing both come from
+    /// here, so there is one answer rather than two.
+    private struct Panels {
+        var song = Rect(0, 0, 0, 0)
+        var status = Rect(0, 0, 0, 0)
+        var tracker: Rect?
+        var meters = Rect(0, 0, 0, 0)
+        var songPosition = Rect(0, 0, 0, 0)
+        var transport = Rect(0, 0, 0, 0)
+        var viewOptions = Rect(0, 0, 0, 0)
+        var playlist = Rect(0, 0, 0, 0)
+    }
+
+    private static func panels(for screen: PlayerScreen) -> Panels {
+        var panels = Panels()
+        let x = margin
+        let contentWidth = width - margin * 2
+        var y = titleBarHeight + margin
+
+        panels.song = Rect(x, y, contentWidth, songHeight)
+        y = panels.song.maxY + gap
+
+        panels.status = Rect(x, y, contentWidth, statusHeight)
+        y = panels.status.maxY + gap
+
+        if screen.showTracker {
+            let panel = Rect(x, y, contentWidth, trackerPanelHeight(rows: screen.trackerRows.count))
+            panels.tracker = panel
+            y = panel.maxY + gap
+        }
+
+        panels.meters = Rect(x, y, contentWidth, metersHeight(channels: screen.meters.count))
+        y = panels.meters.maxY + gap
+
+        panels.songPosition = Rect(x, y, contentWidth, positionHeight)
+        y = panels.songPosition.maxY + gap
+
+        panels.transport = Rect(x, y, contentWidth, transportHeight)
+        y = panels.transport.maxY + gap
+
+        panels.viewOptions = Rect(x, y, contentWidth, viewOptionsHeight)
+        y = panels.viewOptions.maxY + gap
+
+        panels.playlist = Rect(x, y, contentWidth, playlistHeight(rows: screen.playlist.count))
+        return panels
+    }
+
+    public static func render(_ screen: PlayerScreen) -> Canvas {
+        var canvas = Canvas(width: width, height: height(for: screen), fill: Workbench.grey)
+        let stack = panels(for: screen)
+
+        _ = titleBar(&canvas, screen, y: 0)
+        _ = song(&canvas, screen, stack.song)
+        _ = status(&canvas, screen, stack.status)
+        if let panel = stack.tracker {
+            _ = tracker(&canvas, screen, panel)
+        }
+        _ = meters(&canvas, screen, stack.meters)
+        _ = songPosition(&canvas, screen, stack.songPosition)
+        _ = transport(&canvas, screen, stack.transport)
+        _ = viewOptions(&canvas, screen, stack.viewOptions)
+        _ = playlist(&canvas, screen, stack.playlist)
 
         return canvas
     }
@@ -243,9 +321,8 @@ public enum PlayerScreenRenderer {
         let labels = ["|<", "<<", screen.isPlaying ? "||" : ">", "[]", ">>", ">|"]
         var x = inner.x
         for label in labels {
-            let buttonWidth = 34
-            canvas.button(Rect(x, inner.y, buttonWidth, inner.height), label)
-            x += buttonWidth + 4
+            canvas.button(Rect(x, inner.y, transportButtonWidth, inner.height), label)
+            x += transportButtonWidth + 4
         }
 
         canvas.text("VOL", at: x + 6, inner.y + (inner.height - Font.cellHeight) / 2, Workbench.black)

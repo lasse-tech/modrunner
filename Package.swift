@@ -91,12 +91,23 @@ let package = Package(
             path: "Sources/ModRunnerSkin",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        // Putting the skin's pixels in a window, and sending back what the user
+        // did to it. X11 on Linux, opened at run time with dlopen so no
+        // development package is needed to build; Win32 on Windows, where
+        // user32 and gdi32 are part of the system. Empty on macOS, which has
+        // an app.
+        .target(
+            name: "ModRunnerWindow",
+            dependencies: ["ModRunnerSkin"],
+            path: "Sources/ModRunnerWindow",
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
         // The directory cannot be called "modrunner": macOS is case-insensitive
         // by default, so it would be the same directory as the GUI target's.
         // The product is named modrunner, which is what the binary is called.
         .executableTarget(
             name: "ModRunnerCLI",
-            dependencies: ["ModRunnerKit", "ModRunnerSkin"],
+            dependencies: ["ModRunnerKit", "ModRunnerSkin", "ModRunnerWindow"],
             path: "Sources/ModRunnerCLI",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
@@ -112,7 +123,7 @@ let package = Package(
             // gives Windows two `main` symbols to choose from. `swift test`
             // builds every target in the package anyway, so the binary is
             // there when the suite looks for it.
-            dependencies: interfaceTestDependencies + ["ModRunnerKit", "ModRunnerSkin"],
+            dependencies: interfaceTestDependencies + ["ModRunnerKit", "ModRunnerSkin", "ModRunnerWindow"],
             path: "Tests/ModRunnerTests",
             swiftSettings: [.swiftLanguageMode(.v5)]
         )

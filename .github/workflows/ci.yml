@@ -49,13 +49,23 @@ jobs:
       - name: Show toolchain
         run: swift --version
 
+      # Xlib is opened by name at run time, so none of it is checked at build
+      # time: the library, the entry points and the byte offsets into X's
+      # structures are all assumptions until something runs. Xvfb is a real X
+      # server writing to memory instead of a screen, which is enough to open a
+      # window, draw into it and read the pixels back.
+      - name: Install a virtual X server
+        run: |
+          apt-get update -qq
+          apt-get install -y --no-install-recommends xvfb libx11-6 >/dev/null
+
       - name: Build the engine and the command line
         run: swift build -c release --product modrunner
 
       - name: Test
-        # The snapshot suite is macOS-only and stands itself down; the loader,
-        # replayer, localisation and CLI suites run here in full.
-        run: swift test
+        # The snapshot suite is macOS-only and stands itself down; everything
+        # else runs here, the X11 window layer included.
+        run: xvfb-run -a swift test
 
   windows:
     name: Engine and CLI on Windows
