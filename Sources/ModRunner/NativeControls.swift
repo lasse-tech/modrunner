@@ -17,7 +17,7 @@ struct ChannelMeters: View {
     /// same box as the other visualisations.
     var height: CGFloat = 96
 
-    private static let labelHeight: CGFloat = 12
+    private static let labelHeight: CGFloat = 16
     private static let labelSpacing: CGFloat = 5
 
     @State private var peaks: [Float] = []
@@ -27,21 +27,13 @@ struct ChannelMeters: View {
             ForEach(Array(levels.enumerated()), id: \.offset) { index, level in
                 VStack(spacing: Self.labelSpacing) {
                     bar(level: CGFloat(level), peak: CGFloat(peak(at: index)))
-                        .opacity(muted.contains(index) ? 0.28 : 1)
-
-                    // The number doubles as a mute button; double-click solos.
-                    Text("\(index + 1)")
-                        .font(.system(size: 9, weight: .medium, design: .rounded))
-                        .foregroundStyle(muted.contains(index)
-                                         ? AnyShapeStyle(Brand.orange) : AnyShapeStyle(.tertiary))
-                        .strikethrough(muted.contains(index))
-                        .frame(width: barWidth, height: Self.labelHeight)
-                        .contentShape(Rectangle())
-                        .onTapGesture(count: 2) { onSolo?(index) }
-                        .onTapGesture { onToggleMute?(index) }
-                        .help(muted.contains(index)
-                              ? "Channel \(index + 1) is muted — click to unmute, double-click to solo"
-                              : "Click to mute channel \(index + 1), double-click to solo it")
+                        .opacity(muted.contains(index) ? 0.25 : 1)
+                    ChannelButton(number: index + 1,
+                                  muted: muted.contains(index),
+                                  width: barWidth,
+                                  height: Self.labelHeight,
+                                  onToggle: { onToggleMute?(index) },
+                                  onSolo: { onSolo?(index) })
                 }
             }
         }
@@ -97,6 +89,41 @@ struct ChannelMeters: View {
         }
         .frame(width: barWidth,
                height: max(10, height - Self.labelHeight - Self.labelSpacing))
+    }
+}
+
+/// The mute switch under each meter. It has to look like a control, not like a
+/// label: a numbered button that fills in when the channel is silenced.
+private struct ChannelButton: View {
+    let number: Int
+    let muted: Bool
+    let width: CGFloat
+    let height: CGFloat
+    let onToggle: () -> Void
+    let onSolo: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        Text("\(number)")
+            .font(.system(size: 9, weight: .semibold, design: .rounded))
+            .foregroundStyle(muted ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
+            .frame(width: width, height: height)
+            .background {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(muted ? AnyShapeStyle(Brand.orange) : AnyShapeStyle(.quaternary))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 4)
+                    .strokeBorder(hovering ? Brand.orange : .clear, lineWidth: 1)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture(count: 2) { onSolo() }
+            .onTapGesture { onToggle() }
+            .onHover { hovering = $0 }
+            .help(muted
+                  ? "Channel \(number) muted — click to unmute, double-click to solo"
+                  : "Click to mute channel \(number), double-click to solo")
     }
 }
 
