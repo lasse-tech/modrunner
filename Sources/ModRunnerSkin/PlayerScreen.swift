@@ -103,14 +103,14 @@ public enum PlayerScreenRenderer {
     /// knows where it put the play button, so it says — and the window layer
     /// asks. That keeps one description of the layout instead of two that
     /// drift until the buttons stop matching their hit boxes.
-    public struct Control {
-        public enum Role {
-            case previousModule, previousPosition, playPause, stop, nextPosition, nextModule
-            case tracker, songPosition
-        }
+    public enum ControlRole {
+        case previousModule, previousPosition, playPause, stop, nextPosition, nextModule
+        case tracker, songPosition
+    }
 
+    public struct Control {
         public let rect: Rect
-        public let role: Role
+        public let role: ControlRole
     }
 
     public static func controls(for screen: PlayerScreen) -> [Control] {
@@ -118,7 +118,7 @@ public enum PlayerScreenRenderer {
         var controls: [Control] = []
 
         let transport = stack.transport.inset(by: Workbench.bevel + 2)
-        let roles: [Control.Role] = [.previousModule, .previousPosition, .playPause,
+        let roles: [ControlRole] = [.previousModule, .previousPosition, .playPause,
                                      .stop, .nextPosition, .nextModule]
         for (index, role) in roles.enumerated() {
             controls.append(Control(rect: Rect(transport.x + index * (transportButtonWidth + 4),

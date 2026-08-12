@@ -75,7 +75,8 @@ enum WindowPlayer {
                 case .key(let key):
                     switch key {
                     case .escape: running = false
-                    case .space: snapshot.isPlaying ? replayer.pause() : replayer.play()
+                    case .space:
+                        if snapshot.isPlaying { replayer.pause() } else { replayer.play() }
                     case .left: replayer.previousPosition()
                     case .right: replayer.nextPosition()
                     case .character("q"): running = false
@@ -85,7 +86,8 @@ enum WindowPlayer {
                 case .mouseDown(let x, let y):
                     if let action = hit(x: x, y: y, screen: screen) {
                         switch action {
-                        case .playPause: snapshot.isPlaying ? replayer.pause() : replayer.play()
+                        case .playPause:
+                            if snapshot.isPlaying { replayer.pause() } else { replayer.play() }
                         case .stop: replayer.stop()
                         case .previousPosition:
                             replayer.previousPosition()
