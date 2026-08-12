@@ -14,6 +14,8 @@ final class PlayerModel: ObservableObject {
 
     @Published private(set) var module: MMDModule?
     @Published private(set) var snapshot = Replayer.Snapshot()
+    /// A window of the mixed output as it is being heard, for the waveform view.
+    @Published private(set) var waveform: [Float] = []
     @Published private(set) var playlist: [Entry] = []
     @Published private(set) var currentIndex: Int? = nil
     @Published private(set) var status: String = "No module loaded."
@@ -42,6 +44,7 @@ final class PlayerModel: ObservableObject {
         let new = replayer.snapshot()
         let wasPlaying = snapshot.isPlaying
         snapshot = new
+        waveform = replayer.waveform(sampleCount: 320, stride: 4)
         // Roll on to the next module when this one runs out.
         if wasPlaying, new.hasEnded, !new.isPlaying {
             playNext(autoAdvance: true)

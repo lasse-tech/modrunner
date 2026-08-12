@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// Chooses the presentation and keeps the window sized and dressed to match it.
 /// Both skins observe the same `PlayerModel`, so switching between them mid-song
@@ -12,7 +13,14 @@ struct RootView: View {
     private var skin: Skin { Skin(rawValue: skinName) ?? .native }
 
     var body: some View {
-        Group {
+        // Pinned to the top-left rather than centred: if the window size and the
+        // content size ever disagree, the mismatch shows up as slack at the
+        // edges instead of hiding the Workbench title bar off the top.
+        ZStack(alignment: .topLeading) {
+            Color(nsColor: skin == .amiga
+                  ? NSColor(calibratedRed: 0x95 / 255, green: 0x95 / 255, blue: 0x95 / 255, alpha: 1)
+                  : .windowBackgroundColor)
+
             switch skin {
             case .amiga:
                 AmigaSkinView(model: model)
@@ -20,17 +28,19 @@ struct RootView: View {
                 NativeSkinView(model: model)
             }
         }
-        .background(WindowConfigurator(size: windowSize, skin: skin))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        // @AppStorage sees both in-process writes (menu, buttons, gadgets) and
+        // external ones, so this is the reliable trigger for resizing the
+        // window. The app delegate's notification observer is only a backstop.
+        .onChange(of: skinName) { _ in applyWindowState() }
+        .onChange(of: showTracker) { _ in applyWindowState() }
+        .onAppear { applyWindowState() }
     }
 
-    private var windowSize: CGSize {
-        switch skin {
-        case .amiga:
-            return CGSize(width: AmigaSkinView.windowWidth,
-                          height: AmigaSkinView.windowHeight(showingTracker: showTracker))
-        case .native:
-            return CGSize(width: NativeSkinView.windowWidth,
-                          height: NativeSkinView.windowHeight(showingTracker: showTracker))
+    private func applyWindowState() {
+        DispatchQueue.main.async {
+            guard let window = NSApplication.shared.windows.first else { return }
+            WindowChrome.apply(to: window)
         }
     }
 

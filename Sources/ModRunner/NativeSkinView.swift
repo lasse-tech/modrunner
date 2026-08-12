@@ -14,7 +14,12 @@ struct NativeSkinView: View {
 
     @ObservedObject var model: PlayerModel
     @AppStorage("showTracker") private var showTracker = true
+    @AppStorage(VisualizerStyle.storageKey) private var visualizerName = VisualizerStyle.bars.rawValue
     @State private var isDropTarget = false
+
+    private var visualizer: VisualizerStyle {
+        VisualizerStyle(rawValue: visualizerName) ?? .bars
+    }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -96,7 +101,10 @@ struct NativeSkinView: View {
 
     private var meterRow: some View {
         HStack(alignment: .bottom, spacing: 20) {
-            ChannelMeters(levels: model.snapshot.channelMeters)
+            VisualizerView(style: visualizer,
+                           levels: model.snapshot.channelMeters,
+                           samples: model.waveform)
+                .frame(width: visualizer == .waveform ? 250 : nil)
 
             VStack(alignment: .leading, spacing: 6) {
                 stat("Position", positionText)
@@ -109,6 +117,11 @@ struct NativeSkinView: View {
             .font(.system(size: 11))
 
             Spacer(minLength: 0)
+
+            VisualizerPicker(style: Binding(
+                get: { visualizer },
+                set: { visualizerName = $0.rawValue }
+            ))
         }
     }
 

@@ -8,6 +8,9 @@ final class AudioOutput {
     private var sourceNode: AVAudioSourceNode?
     private(set) var isRunning = false
 
+    /// Frames requested by the last render call, for the latency diagnostic.
+    nonisolated(unsafe) static var observedRenderFrames = 0
+
     init(replayer: Replayer) {
         self.replayer = replayer
     }
@@ -31,6 +34,19 @@ final class AudioOutput {
 
         replayer.prepare(sampleRate: sampleRate)
 
+        // The display is read this far in the past, so it matches the speakers.
+        // A render buffer is in flight on top of the device's own latency.
+        let bufferLatency = Double(engine.outputNode.auAudioUnit.maximumFramesToRender) / sampleRate
+        replayer.setOutputLatency(seconds: output.presentationLatency + bufferLatency)
+
+        if ProcessInfo.processInfo.environment["MODRUNNER_AUDIO_DEBUG"] == "1" {
+            print(String(format: "AUDIO rate=%.0f presentationLatency=%.1fms outputLatency=%.1fms",
+                         sampleRate,
+                         output.presentationLatency * 1000,
+                         engine.outputNode.outputPresentationLatency * 1000))
+            fflush(stdout)
+        }
+
         let replayer = self.replayer
         let node = AVAudioSourceNode(format: format) { _, _, frameCount, audioBufferList -> OSStatus in
             let buffers = UnsafeMutableAudioBufferListPointer(audioBufferList)
@@ -48,6 +64,7 @@ final class AudioOutput {
             let left = leftData.assumingMemoryBound(to: Float.self)
             let right = rightData.assumingMemoryBound(to: Float.self)
             replayer.render(left: left, right: right, frames: frames)
+            AudioOutput.observedRenderFrames = frames
             return noErr
         }
 

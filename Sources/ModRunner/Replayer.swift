@@ -90,6 +90,8 @@ final class Replayer {
         var elapsedSeconds = 0.0
         var progress = 0.0
         var hasEnded = false
+        /// Output latency the display is compensating for, in seconds.
+        var outputLatency = 0.0
     }
 
     // MARK: - Stored state
@@ -125,6 +127,18 @@ final class Replayer {
     /// Master gain applied after the module's own master volume. Kept below
     /// unity so four voices at full volume still leave headroom.
     var gain: Float = 0.5
+
+    /// How far ahead of the speakers rendering runs. Everything the interface
+    /// reads is delayed by this much, so the display matches what is heard.
+    private var outputLatencySamples: Double = 0
+
+    private let history = PlaybackHistory()
+
+    /// Reported by the audio device; see PlaybackHistory for why it matters.
+    func setOutputLatency(seconds: Double) {
+        lock.lock(); defer { lock.unlock() }
+        outputLatencySamples = max(0, seconds) * sampleRate
+    }
 
     // MARK: - Lifecycle
 
@@ -205,6 +219,7 @@ final class Replayer {
         pendingLineBreak = nil
         pendingLoopLine = nil
         lineRepeatsRemaining = 0
+        history.reset()
         recomputeTiming()
     }
 
@@ -271,14 +286,44 @@ final class Replayer {
                 }
             }
             let chunk = min(frames - offset, max(1, Int(samplesUntilTick.rounded(.up))))
-            mix(left: left + offset, right: right + offset, frames: chunk)
+            var chunkPeaks = [Float](repeating: 0, count: voices.count)
+            mix(left: left + offset, right: right + offset, frames: chunk, peaks: &chunkPeaks)
+
+            // Keep the mixed signal for the waveform display.
+            for i in 0..<chunk {
+                history.appendAudio((left[offset + i] + right[offset + i]) * 0.5)
+            }
+
             samplesUntilTick -= Double(chunk)
             elapsedSamples += Double(chunk)
+            history.advance(frames: chunk)
+            history.record(currentPositionLocked(peaks: chunkPeaks))
             offset += chunk
         }
     }
 
-    private func mix(left: UnsafeMutablePointer<Float>, right: UnsafeMutablePointer<Float>, frames: Int) {
+    /// Where playback is right now, on the rendering timeline.
+    private func currentPositionLocked(peaks: [Float]) -> PlaybackPosition {
+        var position = PlaybackPosition()
+        position.sequencePosition = sequencePosition
+        position.block = currentBlockIndex
+        position.line = currentLine
+        position.lineCount = currentBlockLines()
+        position.tempo = tempo
+        position.ticksPerLine = ticksPerLine
+        position.elapsedSeconds = elapsedSamples / sampleRate
+        position.linesPlayed = linesPlayed
+        position.channelPeaks = peaks
+
+        if ticksPerLine > 0, samplesPerTick > 0 {
+            let withinTick = 1.0 - max(0, min(1, samplesUntilTick / samplesPerTick))
+            position.lineProgress = min(1, max(0, (Double(tick) + withinTick) / Double(ticksPerLine)))
+        }
+        return position
+    }
+
+    private func mix(left: UnsafeMutablePointer<Float>, right: UnsafeMutablePointer<Float>,
+                     frames: Int, peaks: inout [Float]) {
         let masterScale = Float(module.masterVolume) / 64.0 * gain
         // Amiga hardware panning: voices 0 and 3 left, 1 and 2 right.
         let separation = Float(max(0, min(1, stereoSeparation)))
@@ -353,6 +398,7 @@ final class Replayer {
             }
 
             if peak > voices[index].meter { voices[index].meter = peak }
+            if index < peaks.count { peaks[index] = peak }
         }
 
         // Soft clip so loud modules distort gracefully rather than wrapping.
@@ -822,34 +868,43 @@ final class Replayer {
 
         var snap = Snapshot()
         snap.isPlaying = playing
-        snap.sequencePosition = sequencePosition
-        snap.block = currentBlockIndex
-        snap.line = currentLine
-        snap.lineCount = currentBlockLines()
-        snap.tempo = tempo
-        snap.ticksPerLine = ticksPerLine
-        snap.beatsPerMinute = beatsPerMinuteLocked()
-        snap.elapsedSeconds = elapsedSamples / sampleRate
         snap.hasEnded = songEnded
-
-        let total = module.totalLines
-        snap.progress = total > 0 ? min(1.0, Double(linesPlayed) / Double(total)) : 0
-
-        // Position within the current line: whole ticks plus the fraction of the
-        // tick already rendered.
-        if ticksPerLine > 0, samplesPerTick > 0 {
-            let withinTick = 1.0 - max(0, min(1, samplesUntilTick / samplesPerTick))
-            snap.lineProgress = min(1, max(0, (Double(tick) + withinTick) / Double(ticksPerLine)))
-        }
-
-        snap.channelMeters = voices.map(\.meter)
+        snap.beatsPerMinute = beatsPerMinuteLocked()
+        snap.outputLatency = outputLatencySamples / sampleRate
         snap.channelInstruments = voices.map(\.instrument)
         snap.channelNotes = voices.map { $0.isActive ? $0.period : 0 }
 
-        // Meters decay once read, so the UI shows a falling peak. Tuned for the
-        // 60 Hz polling rate the interface uses.
-        for i in voices.indices { voices[i].meter *= 0.75 }
+        // Everything positional is read one output latency in the past, so the
+        // interface shows what is coming out of the speakers rather than what
+        // has merely been rendered.
+        let delayed = history.position(delayedBy: outputLatencySamples)
+        let position = delayed ?? currentPositionLocked(peaks: voices.map(\.meter))
+
+        snap.sequencePosition = position.sequencePosition
+        snap.block = position.block
+        snap.line = position.line
+        snap.lineProgress = position.lineProgress
+        snap.lineCount = position.lineCount
+        snap.tempo = position.tempo
+        snap.ticksPerLine = position.ticksPerLine
+        snap.elapsedSeconds = position.elapsedSeconds
+
+        let total = module.totalLines
+        snap.progress = total > 0 ? min(1.0, Double(position.linesPlayed) / Double(total)) : 0
+
+        // Peak over a short window so meters read steadily rather than showing
+        // whichever single chunk happened to land on the delayed position.
+        let window = sampleRate * 0.05
+        let peaks = history.peaks(delayedBy: outputLatencySamples, window: window)
+        snap.channelMeters = peaks.isEmpty ? voices.map { _ in 0 } : peaks
 
         return snap
+    }
+
+    /// A window of the mixed output as it is being heard, for the waveform view.
+    func waveform(sampleCount: Int, stride: Int = 4) -> [Float] {
+        lock.lock(); defer { lock.unlock() }
+        return history.waveform(delayedBy: outputLatencySamples,
+                                count: sampleCount, stride: stride)
     }
 }

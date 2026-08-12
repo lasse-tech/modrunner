@@ -177,6 +177,69 @@ final class ReplayerTests: XCTestCase {
         }
     }
 
+    /// Audio is rendered ahead of when it is heard, so the interface must read
+    /// the position one output latency in the past. Without this the display
+    /// runs ahead of the music — at the 313 ms this machine's output device
+    /// reports, that is more than two pattern lines.
+    func testDisplayLagsRenderingByTheOutputLatency() throws {
+        let url = moduleURL("Happy Hour")
+        try skipIfMissing(url)
+        let module = try MMDLoader.load(url: url)
+
+        func elapsedAfterRendering(latency: Double) -> Double {
+            let replayer = Replayer()
+            replayer.prepare(sampleRate: 44_100)
+            replayer.load(module: module)
+            replayer.setOutputLatency(seconds: latency)
+            replayer.play()
+
+            var left = [Float](repeating: 0, count: 512)
+            var right = [Float](repeating: 0, count: 512)
+            for _ in 0..<(44_100 / 512 * 10) {
+                left.withUnsafeMutableBufferPointer { l in
+                    right.withUnsafeMutableBufferPointer { r in
+                        replayer.render(left: l.baseAddress!, right: r.baseAddress!, frames: 512)
+                    }
+                }
+            }
+            return replayer.snapshot().elapsedSeconds
+        }
+
+        let live = elapsedAfterRendering(latency: 0)
+        let delayed = elapsedAfterRendering(latency: 1.0)
+
+        XCTAssertEqual(live - delayed, 1.0, accuracy: 0.1,
+                       "a one second output latency must move the display one second back")
+        XCTAssertGreaterThan(delayed, 0, "the delayed position should still be usable")
+    }
+
+    func testWaveformFollowsTheDelayedOutput() throws {
+        let url = moduleURL("Happy Hour")
+        try skipIfMissing(url)
+        let module = try MMDLoader.load(url: url)
+
+        let replayer = Replayer()
+        replayer.prepare(sampleRate: 44_100)
+        replayer.load(module: module)
+        replayer.setOutputLatency(seconds: 0.05)
+        replayer.play()
+
+        var left = [Float](repeating: 0, count: 512)
+        var right = [Float](repeating: 0, count: 512)
+        for _ in 0..<(44_100 / 512 * 5) {
+            left.withUnsafeMutableBufferPointer { l in
+                right.withUnsafeMutableBufferPointer { r in
+                    replayer.render(left: l.baseAddress!, right: r.baseAddress!, frames: 512)
+                }
+            }
+        }
+
+        let wave = replayer.waveform(sampleCount: 256, stride: 4)
+        XCTAssertEqual(wave.count, 256)
+        XCTAssertTrue(wave.contains { $0 != 0 }, "the waveform window should carry signal")
+        XCTAssertTrue(wave.allSatisfy { abs($0) <= 1.0 }, "waveform samples must stay in range")
+    }
+
     func testPlaybackAdvancesThroughSequence() throws {
         let url = moduleURL("Happy Hour")
         try skipIfMissing(url)

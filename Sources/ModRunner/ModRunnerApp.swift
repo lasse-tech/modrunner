@@ -27,6 +27,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
            let raw = menuItem.representedObject as? String {
             menuItem.state = (Skin.current.rawValue == raw) ? .on : .off
         }
+        if menuItem.action == #selector(selectVisualizer(_:)),
+           let raw = menuItem.representedObject as? String {
+            menuItem.state = (VisualizerStyle.current.rawValue == raw) ? .on : .off
+        }
         return true
     }
 
@@ -96,10 +100,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
         window.contentView = container
         window.setContentSize(size)
+        WindowChrome.dress(window, for: Skin.current)
         window.center()
         window.makeKeyAndOrderFront(nil)
 
         self.window = window
+
+        // The skin and the tracker panel both change the window's size and
+        // decoration. Watching the defaults keeps that in the app delegate,
+        // where the window actually lives.
+        NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let window = self?.window else { return }
+            WindowChrome.apply(to: window)
+        }
 
         if ProcessInfo.processInfo.environment["MODRUNNER_PRINT_WINDOW_ID"] == "1" {
             print("WINDOW_ID \(window.windowNumber) frame=\(window.frame) content=\(window.contentView?.frame ?? .zero)")
@@ -113,6 +128,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                     return button.isHidden ? "hidden" : "visible"
                 }
                 print("""
+                BUFFER frames=\(AudioOutput.observedRenderFrames)
                 CHROME skin=\(Skin.current.rawValue) \
                 titled=\(mask.contains(.titled)) \
                 fullSize=\(mask.contains(.fullSizeContentView)) \
@@ -165,6 +181,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             viewMenu.addItem(item)
         }
 
+        viewMenu.addItem(.separator())
+
+        // Visualisations continue the number-key run after the skins.
+        for (index, style) in VisualizerStyle.allCases.enumerated() {
+            let item = NSMenuItem(title: style.title,
+                                  action: #selector(selectVisualizer(_:)),
+                                  keyEquivalent: "\(Skin.allCases.count + index + 1)")
+            item.target = self
+            item.representedObject = style.rawValue
+            item.state = (VisualizerStyle.current == style) ? .on : .off
+            viewMenu.addItem(item)
+        }
+
         viewMenuItem.submenu = viewMenu
         trackerMenuItem = tracker
 
@@ -208,5 +237,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     @objc private func selectSkin(_ sender: NSMenuItem) {
         guard let raw = sender.representedObject as? String else { return }
         UserDefaults.standard.set(raw, forKey: Skin.storageKey)
+    }
+
+    @objc private func selectVisualizer(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String else { return }
+        UserDefaults.standard.set(raw, forKey: VisualizerStyle.storageKey)
     }
 }

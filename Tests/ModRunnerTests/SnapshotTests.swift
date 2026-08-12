@@ -93,6 +93,23 @@ final class SnapshotTests: XCTestCase {
         XCTAssertEqual(size.width, NativeSkinView.windowWidth, accuracy: 1.0)
     }
 
+    func testRenderWaveform() throws {
+        let directory = try outputDirectory()
+
+        // A recognisable trace: two summed sines, as a module's mix would be.
+        let samples = (0..<320).map { i -> Float in
+            let t = Double(i) / 320
+            return Float(0.32 * sin(t * .pi * 12) + 0.14 * sin(t * .pi * 43))
+        }
+
+        let view = WaveformView(samples: samples)
+            .frame(width: 250, height: VisualizerView.height)
+            .padding(20)
+            .background(Color(nsColor: .windowBackgroundColor))
+
+        try write(view, to: directory.appendingPathComponent("waveform-native.png"))
+    }
+
     func testRenderNativeMeters() throws {
         let directory = try outputDirectory()
 
