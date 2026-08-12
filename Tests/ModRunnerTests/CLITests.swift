@@ -155,11 +155,15 @@ final class CLITests: XCTestCase {
         let result = try run(["dump", try example("Happy Hour"), "--block", "0"])
         XCTAssertEqual(result.status, 0, result.err)
 
-        let lines = result.out.split(separator: "\n")
+        // Not split(separator: "\n"): Windows ends its lines differently, and
+        // a test that only counts line feeds reports one enormous line there.
+        let lines = result.out.split(whereSeparator: \.isNewline)
         XCTAssertTrue(lines.first?.hasPrefix("block 0") ?? false, "first line was: \(lines.first ?? "")")
         XCTAssertTrue(result.out.contains("TRACK 1"))
         // 64 lines of pattern, a header, a column header and a blank line.
-        XCTAssertGreaterThanOrEqual(lines.count, 66)
+        XCTAssertGreaterThanOrEqual(lines.count, 66,
+                                    "output was \(result.out.count) characters: "
+                                    + String(result.out.prefix(200)).debugDescription)
     }
 
     func testDumpRejectsABlockThatIsNotThere() throws {
