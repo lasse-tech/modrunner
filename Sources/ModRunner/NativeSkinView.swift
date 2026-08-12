@@ -161,6 +161,26 @@ struct NativeSkinView: View {
                     .controlSize(.small)
                     .frame(width: 92)
                     .tint(Brand.orange)
+
+                // The Amiga output filter, off by default.
+                Button {
+                    model.filterEnabled.toggle()
+                } label: {
+                    Text("LED")
+                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .foregroundStyle(model.filterEnabled
+                                         ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
+                        .frame(width: 30, height: 18)
+                        .background {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(model.filterEnabled
+                                      ? AnyShapeStyle(Brand.orange) : AnyShapeStyle(.quaternary))
+                        }
+                }
+                .buttonStyle(.plain)
+                .help(model.filterEnabled
+                      ? "Amiga output filter on — click to bypass"
+                      : "Amiga output filter off — click to engage")
             }
         }
     }

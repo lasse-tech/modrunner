@@ -19,7 +19,7 @@ SECONDS     ?= 30
 WAV         ?= build/export.wav
 
 .DEFAULT_GOAL := help
-.PHONY: help build app run install uninstall test check export fmt clean clear distclean
+.PHONY: help build app run install uninstall associate associations test check export fmt clean clear distclean
 
 ## help: Show this list of targets
 help:
@@ -52,6 +52,18 @@ install: app
 	rm -rf "$(INSTALL_DIR)/$(APP_NAME).app"
 	cp -R "$(APP)" "$(INSTALL_DIR)/$(APP_NAME).app"
 	@echo "Installed. Launch it from the Finder or with: open -a $(APP_NAME)"
+
+## associate: Make ModRunner the default app for .med and .mod files
+associate: install
+	@# Launch Services has to see the installed bundle before it will honour
+	@# the document types declared in it.
+	/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister \
+		-f "$(INSTALL_DIR)/$(APP_NAME).app"
+	swift Scripts/associate.swift
+
+## associations: Show which app currently opens .med and .mod files
+associations:
+	@swift Scripts/associate.swift --status
 
 ## uninstall: Remove ModRunner.app from /Applications
 uninstall:

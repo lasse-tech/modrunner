@@ -414,6 +414,81 @@ final class ReplayerTests: XCTestCase {
                           "step of \(largestStep) against a peak of \(peak) — the sample end clicks")
     }
 
+    /// The Amiga output filter must remove treble and nothing else: same
+    /// timing, same level, no instability.
+    func testAmigaFilterRemovesTrebleOnly() throws {
+        let url = moduleURL("Terminator II")
+        try skipIfMissing(url)
+        let module = try ModuleLoader.load(url: url)
+
+        func render(filtered: Bool) -> [Float] {
+            let replayer = Replayer()
+            replayer.prepare(sampleRate: 44_100)
+            replayer.load(module: module)
+            replayer.filterEnabled = filtered
+            replayer.play()
+            let total = 44_100 * 20
+            var left = [Float](repeating: 0, count: total)
+            var right = [Float](repeating: 0, count: total)
+            left.withUnsafeMutableBufferPointer { l in
+                right.withUnsafeMutableBufferPointer { r in
+                    var offset = 0
+                    while offset < total {
+                        let frames = min(512, total - offset)
+                        replayer.render(left: l.baseAddress! + offset,
+                                        right: r.baseAddress! + offset, frames: frames)
+                        offset += frames
+                    }
+                }
+            }
+            return left
+        }
+
+        let dry = render(filtered: false)
+        let wet = render(filtered: true)
+
+        XCTAssertTrue(wet.allSatisfy { $0.isFinite }, "the filter produced non-finite samples")
+        XCTAssertLessThanOrEqual(wet.map(abs).max() ?? 0, 1.0)
+
+        // Energy in the top octave should drop sharply; the body should not.
+        func band(_ x: [Float], _ low: Double, _ high: Double) -> Double {
+            let n = 1 << 15
+            var total = 0.0
+            var start = 0
+            while start + n <= x.count {
+                let slice = Array(x[start..<(start + n)])
+                var real = slice.map { Double($0) }
+                // Crude DFT over a few bins is enough for a ratio; use FFT-free
+                // Goertzel at the band edges instead of a full transform.
+                var energy = 0.0
+                for hertz in stride(from: low, to: high, by: (high - low) / 24) {
+                    let w = 2 * Double.pi * hertz / 44_100
+                    var s0 = 0.0, s1 = 0.0, s2 = 0.0
+                    let coeff = 2 * cos(w)
+                    for sample in real {
+                        s0 = sample + coeff * s1 - s2
+                        s2 = s1; s1 = s0
+                    }
+                    energy += s1 * s1 + s2 * s2 - coeff * s1 * s2
+                }
+                total += energy
+                real.removeAll()
+                start += n * 4
+            }
+            return total
+        }
+
+        let dryHigh = band(dry, 8_000, 15_000)
+        let wetHigh = band(wet, 8_000, 15_000)
+        let dryLow = band(dry, 200, 800)
+        let wetLow = band(wet, 200, 800)
+
+        XCTAssertLessThan(wetHigh / dryHigh, 0.3,
+                          "the filter barely touched the treble (\(wetHigh / dryHigh))")
+        XCTAssertGreaterThan(wetLow / dryLow, 0.7,
+                             "the filter is eating the body of the sound (\(wetLow / dryLow))")
+    }
+
     func testWaveformFollowsTheDelayedOutput() throws {
         let url = moduleURL("Happy Hour")
         try skipIfMissing(url)

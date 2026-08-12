@@ -44,6 +44,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
            let raw = menuItem.representedObject as? String {
             menuItem.state = (Skin.current.rawValue == raw) ? .on : .off
         }
+        if menuItem.action == #selector(toggleFilter) {
+            menuItem.state = UserDefaults.standard.bool(forKey: "amigaFilter") ? .on : .off
+        }
         if menuItem.action == #selector(selectVisualizer(_:)),
            let raw = menuItem.representedObject as? String {
             menuItem.state = (VisualizerStyle.current.rawValue == raw) ? .on : .off
@@ -221,6 +224,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             viewMenu.addItem(item)
         }
 
+        viewMenu.addItem(.separator())
+        let filter = NSMenuItem(title: "Amiga Filter",
+                                action: #selector(toggleFilter), keyEquivalent: "f")
+        filter.target = self
+        filter.state = UserDefaults.standard.bool(forKey: "amigaFilter") ? .on : .off
+        viewMenu.addItem(filter)
+
         viewMenuItem.submenu = viewMenu
         trackerMenuItem = tracker
 
@@ -264,6 +274,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     @objc private func selectSkin(_ sender: NSMenuItem) {
         guard let raw = sender.representedObject as? String else { return }
         UserDefaults.standard.set(raw, forKey: Skin.storageKey)
+    }
+
+    @objc private func toggleFilter() {
+        Task { @MainActor in
+            PlayerModel.shared.filterEnabled.toggle()
+        }
     }
 
     @objc private func selectVisualizer(_ sender: NSMenuItem) {

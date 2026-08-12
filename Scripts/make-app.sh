@@ -46,8 +46,45 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
         <dict>
             <key>CFBundleTypeName</key><string>MED/OctaMED module</string>
             <key>CFBundleTypeRole</key><string>Viewer</string>
+            <key>LSHandlerRank</key><string>Owner</string>
+            <key>CFBundleTypeExtensions</key>
+            <array><string>med</string><string>mmd</string><string>mmd0</string><string>mmd1</string></array>
             <key>LSItemContentTypes</key>
-            <array><string>public.data</string></array>
+            <array><string>de.incudex.modrunner.med</string></array>
+        </dict>
+        <dict>
+            <key>CFBundleTypeName</key><string>ProTracker module</string>
+            <key>CFBundleTypeRole</key><string>Viewer</string>
+            <key>LSHandlerRank</key><string>Owner</string>
+            <key>CFBundleTypeExtensions</key>
+            <array><string>mod</string></array>
+            <key>LSItemContentTypes</key>
+            <array><string>de.incudex.modrunner.mod</string></array>
+        </dict>
+    </array>
+    <key>UTExportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key><string>de.incudex.modrunner.med</string>
+            <key>UTTypeDescription</key><string>MED/OctaMED module</string>
+            <key>UTTypeConformsTo</key>
+            <array><string>public.data</string><string>public.audio</string></array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array><string>med</string><string>mmd</string><string>mmd0</string><string>mmd1</string></array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key><string>de.incudex.modrunner.mod</string>
+            <key>UTTypeDescription</key><string>ProTracker module</string>
+            <key>UTTypeConformsTo</key>
+            <array><string>public.data</string><string>public.audio</string></array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array><string>mod</string></array>
+            </dict>
         </dict>
     </array>
 </dict>

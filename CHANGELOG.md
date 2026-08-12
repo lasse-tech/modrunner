@@ -29,7 +29,11 @@ All notable changes to this project are documented here. The format follows
 - ProTracker `.mod` support, loaded into the same model and played by the same
   replayer; the effect dialect is carried on the module, since the command
   numbers mean different things in the two formats
-- Opens modules from the command line and from the Finder
+- The Amiga output filter, switchable and remembered between launches
+- Per-channel mute and solo
+- Opens modules from the command line and from the Finder; `.med` and `.mod`
+  are declared as document types with their own UTIs, and `make associate`
+  registers ModRunner as their default application
 - Offline-rendering test suite and a WAV export for listening checks
 - Four example modules by the author
 

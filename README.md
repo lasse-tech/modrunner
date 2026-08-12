@@ -36,7 +36,12 @@ AmigaOS 3.x Workbench interface.
 - Tracker view: the note data of the current block moving under a fixed
   playhead, in OctaMED's notation, with beat lines marked — toggle it with the
   **Tracks** button or ⌘T, and the window resizes to match
-- Per-voice level meters, song position scrubbing, transport, volume
+- Per-voice level meters with mute and solo, song position scrubbing,
+  transport, volume
+- The Amiga output filter, switchable (⌘F). An A500 put a fixed RC stage and a
+  switchable two-pole Butterworth between Paula and the sockets, and a lot of
+  period music was written through them. Off by default, so playback stays
+  comparable with other players.
 - Opens modules passed on the command line or double-clicked in the Finder
 
 Synthetic and hybrid instruments are parsed but stay silent — they need OctaMED's
@@ -50,6 +55,7 @@ make test       # loader + replayer tests
 make app        # build/ModRunner.app
 make run        # build and play the bundled examples
 make install    # copy the app into /Applications
+make associate  # open .med and .mod files with ModRunner
 make help       # every target, with the variables you can override
 ```
 

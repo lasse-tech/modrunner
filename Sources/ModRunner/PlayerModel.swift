@@ -26,6 +26,14 @@ final class PlayerModel: ObservableObject {
     /// Channels the listener has silenced, for picking a track out of the mix.
     @Published private(set) var mutedChannels = Set<Int>()
 
+    /// The Amiga output filter. Stored, so the choice survives a restart.
+    @Published var filterEnabled: Bool = UserDefaults.standard.bool(forKey: "amigaFilter") {
+        didSet {
+            UserDefaults.standard.set(filterEnabled, forKey: "amigaFilter")
+            replayer.filterEnabled = filterEnabled
+        }
+    }
+
     func toggleMute(channel: Int) {
         if mutedChannels.contains(channel) {
             mutedChannels.remove(channel)
@@ -59,6 +67,7 @@ final class PlayerModel: ObservableObject {
 
     init() {
         replayer.gain = Float(volume)
+        replayer.filterEnabled = UserDefaults.standard.bool(forKey: "amigaFilter")
         timer = Timer.publish(every: 1.0 / 60.0, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in self?.poll() }

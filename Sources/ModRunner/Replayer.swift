@@ -158,6 +158,23 @@ final class Replayer {
 
     private let history = PlaybackHistory()
 
+    /// The machine's output filter, one instance per output channel.
+    private var filterLeft = AmigaFilter()
+    private var filterRight = AmigaFilter()
+
+    /// Whether the switchable LED stage is engaged. The fixed RC stage is only
+    /// applied when the filter is on at all, so that leaving it off reproduces
+    /// exactly what the player did before this existed.
+    var filterEnabled = false {
+        didSet {
+            lock.lock(); defer { lock.unlock() }
+            filterLeft.ledEnabled = filterEnabled
+            filterRight.ledEnabled = filterEnabled
+            filterLeft.reset()
+            filterRight.reset()
+        }
+    }
+
     /// Channels the listener has silenced. Muted voices still advance, so
     /// unmuting drops back into the music rather than restarting a note.
     private var mutedVoices = Set<Int>()
@@ -185,6 +202,10 @@ final class Replayer {
         // The history is measured in frames, so a rate change invalidates it.
         if sampleRate != self.sampleRate { history.reset() }
         self.sampleRate = sampleRate
+        filterLeft.prepare(sampleRate: sampleRate)
+        filterRight.prepare(sampleRate: sampleRate)
+        filterLeft.ledEnabled = filterEnabled
+        filterRight.ledEnabled = filterEnabled
         recomputeTiming()
     }
 
@@ -521,6 +542,15 @@ final class Replayer {
 
             if peak > voices[index].meter { voices[index].meter = peak }
             if index < peaks.count { peaks[index] = peak }
+        }
+
+        // The output filter belongs before the limiter: on the machine it sat
+        // after the mixing and before anything that could clip.
+        if filterEnabled {
+            for i in 0..<frames {
+                left[i] = filterLeft.process(left[i])
+                right[i] = filterRight.process(right[i])
+            }
         }
 
         // Soft clip so loud modules distort gracefully rather than wrapping.
