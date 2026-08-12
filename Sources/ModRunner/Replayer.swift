@@ -433,9 +433,22 @@ final class Replayer {
         }
     }
 
+    /// Exposed for the limiter test.
+    func softClipForTesting(_ x: Float) -> Float { softClip(x) }
+
+    /// Rounds off peaks instead of letting them wrap.
+    ///
+    /// This has to be continuous. The previous formula jumped from 1.0 to 0.5
+    /// the instant a sample crossed full scale, so every peak that went over
+    /// was slammed to half amplitude — heard as a loud crackle, and measurable
+    /// as missing energy in the bass, which carries the largest amplitudes.
     private func softClip(_ x: Float) -> Float {
-        if x > 1.0 || x < -1.0 { return x > 0 ? 1.0 - 1.0 / (1.0 + x) : -(1.0 - 1.0 / (1.0 - x)) }
-        return x
+        let threshold: Float = 0.75
+        let magnitude = abs(x)
+        guard magnitude > threshold else { return x }
+        let excess = (magnitude - threshold) / (1 - threshold)
+        let shaped = threshold + (1 - threshold) * tanh(excess)
+        return x < 0 ? -shaped : shaped
     }
 
     // MARK: - Tick processing

@@ -255,6 +255,31 @@ final class ReplayerTests: XCTestCase {
         XCTAssertEqual(snap.elapsedSeconds, 5.0 - 0.25, accuracy: 0.15)
     }
 
+    /// The limiter must be continuous. An earlier version returned 1.0 for an
+    /// input of exactly 1.0 and 0.5 for 1.001, so every peak that crossed full
+    /// scale was slammed to half amplitude — a loud crackle at high volume, and
+    /// invisible at the default gain because nothing reached full scale.
+    func testSoftClipIsContinuousAndBounded() {
+        let replayer = Replayer()
+        var previous = replayer.softClipForTesting(-3.0)
+
+        var value: Float = -3.0
+        while value <= 3.0 {
+            let clipped = replayer.softClipForTesting(value)
+            XCTAssertLessThanOrEqual(abs(clipped), 1.0, "limiter exceeded full scale at \(value)")
+            XCTAssertGreaterThanOrEqual(clipped, previous - 0.001, "limiter is not monotonic at \(value)")
+            XCTAssertLessThan(abs(clipped - previous), 0.02,
+                              "limiter jumps at \(value): \(previous) -> \(clipped)")
+            previous = clipped
+            value += 0.001
+        }
+
+        // Untouched well below the threshold, and symmetric.
+        XCTAssertEqual(replayer.softClipForTesting(0.5), 0.5, accuracy: 0.0001)
+        XCTAssertEqual(replayer.softClipForTesting(-0.5), -0.5, accuracy: 0.0001)
+        XCTAssertEqual(replayer.softClipForTesting(2.0), -replayer.softClipForTesting(-2.0), accuracy: 0.0001)
+    }
+
     func testWaveformFollowsTheDelayedOutput() throws {
         let url = moduleURL("Happy Hour")
         try skipIfMissing(url)
@@ -464,6 +489,81 @@ final class ReplayerTests: XCTestCase {
         XCTAssertGreaterThan(snap.sequencePosition, 2, "playback did not advance through the sequence")
         XCTAssertGreaterThan(snap.progress, 0.05)
         XCTAssertTrue(snap.isPlaying)
+    }
+
+    /// Reports which channels actually produce sound, per ten second window.
+    func testChannelActivity() throws {
+        let path = ProcessInfo.processInfo.environment["MED_CHANNELS"] ?? ""
+        try XCTSkipIf(path.isEmpty, "Set MED_CHANNELS=<module path>")
+
+        let module = try ModuleLoader.load(url: URL(fileURLWithPath: path))
+        let replayer = Replayer()
+        replayer.prepare(sampleRate: 44_100)
+        replayer.load(module: module)
+        replayer.play()
+
+        var left = [Float](repeating: 0, count: 4410)
+        var right = [Float](repeating: 0, count: 4410)
+        var window = [Float](repeating: 0, count: 8)
+        for tenth in 0..<1600 {
+            left.withUnsafeMutableBufferPointer { l in
+                right.withUnsafeMutableBufferPointer { r in
+                    replayer.render(left: l.baseAddress!, right: r.baseAddress!, frames: 4410)
+                }
+            }
+            let snap = replayer.snapshot()
+            for i in 0..<min(window.count, snap.channelMeters.count) {
+                window[i] = max(window[i], snap.channelMeters[i])
+            }
+            if tenth % 100 == 99 {
+                let marks = window.prefix(module.numTracks).map { $0 > 0.001 ? "#" : "." }
+                print(String(format: "CH t=%3ds pos=%2d %@",
+                             (tenth + 1) / 10, snap.sequencePosition, marks.joined()))
+                window = [Float](repeating: 0, count: 8)
+            }
+        }
+    }
+
+    /// Renders loop-handling variants of one module, to find out which reading
+    /// of the repeat fields matches a reference player.
+    func testExportLoopVariants() throws {
+        let path = ProcessInfo.processInfo.environment["MED_LOOPTEST"] ?? ""
+        let outDir = ProcessInfo.processInfo.environment["MED_BATCH_OUT"] ?? ""
+        try XCTSkipIf(path.isEmpty || outDir.isEmpty, "Set MED_LOOPTEST and MED_BATCH_OUT")
+
+        let base = try ModuleLoader.load(url: URL(fileURLWithPath: path))
+        let seconds = Double(ProcessInfo.processInfo.environment["MED_SECONDS"] ?? "180") ?? 180
+        let directory = URL(fileURLWithPath: outDir)
+
+        var variants: [String: MMDModule] = ["asis": base]
+
+        // No loop at all.
+        var noLoop = base
+        for i in noLoop.instruments.indices { noLoop.instruments[i].repeatLength = 0 }
+        variants["noloop"] = noLoop
+
+        // Loop the whole sample.
+        var fullLoop = base
+        for i in fullLoop.instruments.indices where fullLoop.instruments[i].isLooping {
+            fullLoop.instruments[i].repeatStart = 0
+            fullLoop.instruments[i].repeatLength = fullLoop.instruments[i].data.count
+        }
+        variants["fullloop"] = fullLoop
+
+        // Repeat fields taken as bytes rather than words, i.e. not doubled.
+        var halved = base
+        for i in halved.instruments.indices where halved.instruments[i].isLooping {
+            halved.instruments[i].repeatStart /= 2
+            halved.instruments[i].repeatLength /= 2
+        }
+        variants["halved"] = halved
+
+        for (name, module) in variants {
+            let (l, r) = render(module: module, seconds: seconds)
+            try WAVWriter.write(left: l, right: r, sampleRate: 44_100,
+                                to: directory.appendingPathComponent("var_\(name).wav"))
+            print("VARIANT \(name) written")
+        }
     }
 
     /// Traces playback position over time. Set MED_TRACE to a module path.
