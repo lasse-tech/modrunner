@@ -33,8 +33,10 @@ if ! codesign --verify --strict "$APP" 2>/dev/null; then
     echo "error: $APP is not validly signed" >&2
     exit 1
 fi
-if [[ -n "$NOTARY_PROFILE" ]] && \
-   ! codesign -dv "$APP" 2>&1 | grep -q "flags=.*runtime"; then
+# Read the whole description first: piping codesign into grep -q kills it with
+# SIGPIPE, which pipefail then reports as a failed check.
+SIGNATURE="$(codesign -dv "$APP" 2>&1)"
+if [[ -n "$NOTARY_PROFILE" && "$SIGNATURE" != *"flags="*"runtime"* ]]; then
     echo "error: $APP was built without the hardened runtime; notarisation would reject it." >&2
     echo "       Rebuild with SIGN_IDENTITY set." >&2
     exit 1
