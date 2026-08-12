@@ -32,15 +32,19 @@ struct RootView: View {
         // @AppStorage sees both in-process writes (menu, buttons, gadgets) and
         // external ones, so this is the reliable trigger for resizing the
         // window. The app delegate's notification observer is only a backstop.
-        .onChange(of: skinName) { _ in applyWindowState() }
+        .onChange(of: skinName) { _ in applyWindowState(skinChanged: true) }
         .onChange(of: showTracker) { _ in applyWindowState() }
         .onAppear { applyWindowState() }
     }
 
-    private func applyWindowState() {
+    private func applyWindowState(skinChanged: Bool = false) {
         DispatchQueue.main.async {
             guard let window = NSApplication.shared.windows.first else { return }
-            WindowChrome.apply(to: window)
+            if skinChanged {
+                WindowChrome.applySkinChange(to: window)
+            } else {
+                WindowChrome.apply(to: window)
+            }
         }
     }
 

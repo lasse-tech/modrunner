@@ -22,6 +22,10 @@ All notable changes to this project are documented here. The format follows
 - Tracker view showing the current block's note data under a fixed playhead,
   toggleable and remembered between launches; the window resizes to match
 - Module statistics in the status line: blocks, lines, notes, samples
+- Switchable visualisation: per-voice levels or an oscilloscope of the output
+- Display synchronised to the speakers, compensating for output latency
+- The window position is remembered, separately per skin, and discarded when it
+  would land on a screen that is no longer attached
 - Opens modules from the command line and from the Finder
 - Offline-rendering test suite and a WAV export for listening checks
 - Four example modules by the author

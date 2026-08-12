@@ -16,7 +16,24 @@ enum ModRunnerMain {
     }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, NSWindowDelegate {
+
+    // MARK: - Remembering where the window was
+
+    /// AppKit nudges the window about while it is being set up. Saving during
+    /// that would overwrite the stored position with an interim value before it
+    /// has even been read back, so saving starts once the position is restored.
+    private var positionRestored = false
+
+    func windowDidMove(_ notification: Notification) {
+        guard positionRestored, let window = notification.object as? NSWindow else { return }
+        WindowChrome.saveOrigin(of: window, for: Skin.current)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow else { return }
+        WindowChrome.saveOrigin(of: window, for: Skin.current)
+    }
 
     /// Keeps the menu's tick mark in step when the Tracks button is used.
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
@@ -72,9 +89,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // after opening.
         let size = NSSize(width: RootView.initialSize().width,
                           height: RootView.initialSize().height)
-        let window = NSWindow(
+        let window = ModRunnerWindow(
             contentRect: NSRect(origin: .zero, size: size),
-            styleMask: [.titled, .closable, .fullSizeContentView],
+            styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -99,10 +116,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         container.addSubview(hosting)
 
         window.contentView = container
-        window.setContentSize(size)
         WindowChrome.dress(window, for: Skin.current)
-        window.center()
+        window.setContentSize(size)
+        window.delegate = self
         window.makeKeyAndOrderFront(nil)
+
+        // The position is restored after the first layout pass. Restoring it
+        // before that let the view's own sizing run afterwards and drag the
+        // origin along with it, so the window crept away from where it was left.
+        DispatchQueue.main.async {
+            WindowChrome.restoreOrigin(of: window, for: Skin.current)
+            self.positionRestored = true
+        }
 
         self.window = window
 
@@ -130,6 +155,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 print("""
                 BUFFER frames=\(AudioOutput.observedRenderFrames)
                 CHROME skin=\(Skin.current.rawValue) \
+                systemTitlebar=\(WindowChrome.hasSystemTitlebar(window)) \
+                origin=\(window.frame.origin) \
                 titled=\(mask.contains(.titled)) \
                 fullSize=\(mask.contains(.fullSizeContentView)) \
                 transparent=\(window.titlebarAppearsTransparent) \
