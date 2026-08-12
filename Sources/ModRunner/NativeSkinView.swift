@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 struct NativeSkinView: View {
 
     static let windowWidth: CGFloat = 640
-    private static let baseHeight: CGFloat = 512
+    private static let baseHeight: CGFloat = 512 + 30
 
     static func windowHeight(showingTracker: Bool) -> CGFloat {
         showingTracker ? baseHeight + SmoothTrackerView.height + 26 : baseHeight
@@ -59,7 +59,7 @@ struct NativeSkinView: View {
     private var header: some View {
         HStack(alignment: .top, spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(model.module?.displayTitle ?? "No module")
+                Text(model.module?.displayTitle ?? L10n.t("player.noModule"))
                     .font(.system(size: 19, weight: .semibold))
                     .lineLimit(1)
 
@@ -71,20 +71,23 @@ struct NativeSkinView: View {
 
             Spacer(minLength: 8)
 
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(timeText)
-                    .font(.system(size: 17, weight: .medium, design: .rounded))
-                    .monospacedDigit()
-                Text(positionText)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+            VStack(alignment: .trailing, spacing: 6) {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(timeText)
+                        .font(.system(size: 17, weight: .medium, design: .rounded))
+                        .monospacedDigit()
+                    Text(positionText)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+                NativeViewOptions(model: model)
             }
         }
     }
 
     private var subtitle: String {
-        guard let module = model.module else { return "Drop a module or a folder here" }
+        guard let module = model.module else { return L10n.t("player.dropHint") }
         var parts: [String] = []
         let annotation = module.annotation
             .split(separator: "\n").first.map(String.init)?
@@ -108,11 +111,11 @@ struct NativeSkinView: View {
                            onSolo: { model.soloChannel($0) })
 
             VStack(alignment: .leading, spacing: 6) {
-                stat("Position", positionText)
-                stat("Block", model.module == nil ? "—" : "\(model.snapshot.block)")
+                stat(L10n.t("stat.position"), positionText)
+                stat(L10n.t("stat.block"), model.module == nil ? "—" : "\(model.snapshot.block)")
                 stat("Line", model.module == nil
                      ? "—" : "\(model.snapshot.line) / \(model.snapshot.lineCount)")
-                stat("Tempo", "\(model.snapshot.tempo) · \(model.snapshot.ticksPerLine) TPL"
+                stat(L10n.t("stat.tempo"), "\(model.snapshot.tempo) · \(model.snapshot.ticksPerLine) TPL"
                      + String(format: " · %.0f BPM", model.snapshot.beatsPerMinute))
             }
             .font(.system(size: 11))
@@ -179,8 +182,8 @@ struct NativeSkinView: View {
                 }
                 .buttonStyle(.plain)
                 .help(model.filterEnabled
-                      ? "Amiga output filter on — click to bypass"
-                      : "Amiga output filter off — click to engage")
+                      ? L10n.t("tooltip.filterOn")
+                      : L10n.t("tooltip.filterOff"))
             }
         }
     }
@@ -190,11 +193,11 @@ struct NativeSkinView: View {
     private var playlist: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("Modules")
+                Text(L10n.t("player.modules"))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Open…") { model.openPanel() }
+                Button(L10n.t("button.open")) { model.openPanel() }
                     .buttonStyle(.link)
                     .font(.system(size: 11))
             }

@@ -6,7 +6,7 @@ struct AmigaSkinView: View {
     /// The window is a fixed size, as Amiga tool windows were, but it has two
     /// sizes: with and without the tracker panel.
     static let windowWidth: CGFloat = 560
-    private static let baseHeight: CGFloat = 486
+    private static let baseHeight: CGFloat = 486 + AmigaViewOptions.height
 
     static func windowHeight(showingTracker: Bool) -> CGFloat {
         showingTracker ? baseHeight + TrackerView.panelHeight + 8 : baseHeight
@@ -44,6 +44,7 @@ struct AmigaSkinView: View {
                 metersPanel
                 positionPanel
                 transportPanel
+                AmigaViewOptions(model: model)
                 playlistPanel
             }
             .padding(8)
@@ -83,7 +84,7 @@ struct AmigaSkinView: View {
 
     private var songPanel: some View {
         VStack(alignment: .leading, spacing: 6) {
-            AmigaReadout(text: model.module?.displayTitle ?? "— no module —")
+            AmigaReadout(text: model.module?.displayTitle ?? L10n.t("player.noModuleDashed"))
 
             if let annotation = model.module?.annotation, !annotation.isEmpty {
                 ScrollView {
@@ -127,7 +128,7 @@ struct AmigaSkinView: View {
 
     private var positionPanel: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("SONG POSITION")
+            Text(L10n.t("player.songPosition"))
                 .font(Amiga.font(9))
                 .foregroundColor(Amiga.black)
             AmigaSlider(value: model.snapshot.progress) { fraction in
@@ -148,21 +149,21 @@ struct AmigaSkinView: View {
 
             Spacer(minLength: 4)
 
-            Text("VOL")
+            Text(L10n.t("player.volume"))
                 .font(Amiga.font(9))
                 .foregroundColor(Amiga.black)
             AmigaVolumeSlider(value: $model.volume)
                 .frame(width: 90)
 
-            AmigaButton(label: "Tracks", width: 66) { showTracker.toggle() }
-            AmigaButton(label: "Load", width: 52) { model.openPanel() }
+            AmigaButton(label: L10n.t("button.tracks"), width: 66) { showTracker.toggle() }
+            AmigaButton(label: L10n.t("button.load"), width: 62) { model.openPanel() }
         }
         .amigaBevel(.raised)
     }
 
     private var playlistPanel: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("MODULES  —  drop files or a drawer here")
+            Text(L10n.t("player.modulesDrop"))
                 .font(Amiga.font(9))
                 .foregroundColor(Amiga.black)
 

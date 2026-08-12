@@ -9,6 +9,9 @@ struct RootView: View {
     @StateObject private var model = PlayerModel.shared
     @AppStorage(Skin.storageKey) private var skinName = Skin.native.rawValue
     @AppStorage("showTracker") private var showTracker = true
+    /// Read only so the tree is rebuilt when the language changes: the strings
+    /// are fetched imperatively through `L10n`, which SwiftUI cannot observe.
+    @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.system.rawValue
 
     private var skin: Skin { Skin(rawValue: skinName) ?? .native }
 
@@ -28,6 +31,7 @@ struct RootView: View {
                 NativeSkinView(model: model)
             }
         }
+        .id(language)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         // @AppStorage sees both in-process writes (menu, buttons, gadgets) and
         // external ones, so this is the reliable trigger for resizing the

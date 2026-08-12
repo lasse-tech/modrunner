@@ -16,7 +16,7 @@ enum ModRunnerMain {
     }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, NSWindowDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, NSWindowDelegate, NSMenuDelegate {
 
     // MARK: - Remembering where the window was
 
@@ -28,6 +28,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     func windowDidMove(_ notification: Notification) {
         guard positionRestored, let window = notification.object as? NSWindow else { return }
         WindowChrome.saveOrigin(of: window, for: Skin.current)
+    }
+
+    /// The green gadget opens the stage. Each skin has exactly one size, so
+    /// there is nothing to zoom to; returning false leaves the window alone.
+    func windowShouldZoom(_ window: NSWindow, toFrame newFrame: NSRect) -> Bool {
+        MainActor.assumeIsolated { StageController.shared.toggle() }
+        return false
+    }
+
+    /// Belt and braces: some paths into zoom (accessibility, for one) resize
+    /// the window without asking `windowShouldZoom` first. Handing back the
+    /// frame it already has leaves nothing to resize.
+    func windowWillUseStandardFrame(_ window: NSWindow, defaultFrame newFrame: NSRect) -> NSRect {
+        window.frame
     }
 
     func windowWillClose(_ notification: Notification) {
@@ -51,11 +65,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
            let raw = menuItem.representedObject as? String {
             menuItem.state = (VisualizerStyle.current.rawValue == raw) ? .on : .off
         }
+        if menuItem.action == #selector(toggleStage) {
+            menuItem.state = MainActor.assumeIsolated { StageController.shared.isPresented } ? .on : .off
+        }
+        if menuItem.action == #selector(toggleMiniPlayer) {
+            menuItem.state = MainActor.assumeIsolated { MiniPlayerController.shared.isPresented } ? .on : .off
+        }
         return true
     }
 
     private var window: NSWindow?
     private var trackerMenuItem: NSMenuItem?
+    /// The language the menu bar was last built in.
+    private var menuLanguage: AppLanguage = .system
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         buildMenu()
@@ -119,6 +141,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         container.addSubview(hosting)
 
         window.contentView = container
+        // Both skins are a fixed size, so macOS's own full-screen mode has
+        // nothing sensible to do here — and leaving it enabled makes AppKit add
+        // an "Enter Full Screen" item next to ours, which does something else
+        // entirely.
+        window.collectionBehavior = [.fullScreenNone]
         WindowChrome.dress(window, for: Skin.current)
         window.setContentSize(size)
         window.delegate = self
@@ -140,8 +167,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            guard let window = self?.window else { return }
+            guard let self, let window = self.window else { return }
             WindowChrome.apply(to: window)
+
+            // The menu bar is built once, in the language of the moment. A
+            // change of language has to rebuild it; the views follow on their
+            // own, because RootView is keyed on the setting.
+            if self.menuLanguage != AppLanguage.current {
+                self.buildMenu()
+            }
         }
 
         if ProcessInfo.processInfo.environment["MODRUNNER_PRINT_WINDOW_ID"] == "1" {
@@ -176,24 +210,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
 
     /// A minimal menu, mostly so the standard keyboard shortcuts work.
     private func buildMenu() {
+        menuLanguage = AppLanguage.current
         let mainMenu = NSMenu()
 
         let appMenuItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "About ModRunner",
-                        action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
-                        keyEquivalent: "")
+        let about = NSMenuItem(title: L10n.t("menu.about"),
+                               action: #selector(showAbout), keyEquivalent: "")
+        about.target = self
+        appMenu.addItem(about)
+
+        let settings = NSMenuItem(title: L10n.t("menu.settings"),
+                                  action: #selector(showSettings), keyEquivalent: ",")
+        settings.target = self
+        appMenu.addItem(settings)
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Hide ModRunner",
+        appMenu.addItem(withTitle: L10n.t("menu.hide"),
                         action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        appMenu.addItem(withTitle: "Quit ModRunner",
+        appMenu.addItem(withTitle: L10n.t("menu.quit"),
                         action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appMenuItem.submenu = appMenu
         mainMenu.addItem(appMenuItem)
 
         let viewMenuItem = NSMenuItem()
-        let viewMenu = NSMenu(title: "View")
-        let tracker = NSMenuItem(title: "Show Tracker",
+        let viewMenu = NSMenu(title: L10n.t("menu.view"))
+        let tracker = NSMenuItem(title: L10n.t("menu.showTracker"),
                                  action: #selector(toggleTracker), keyEquivalent: "t")
         tracker.target = self
         tracker.state = AmigaSkinView.trackerVisiblePreference ? .on : .off
@@ -225,20 +266,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         }
 
         viewMenu.addItem(.separator())
-        let filter = NSMenuItem(title: "Amiga Filter",
+        let filter = NSMenuItem(title: L10n.t("menu.amigaFilter"),
                                 action: #selector(toggleFilter), keyEquivalent: "f")
         filter.target = self
         filter.state = UserDefaults.standard.bool(forKey: "amigaFilter") ? .on : .off
         viewMenu.addItem(filter)
 
+        viewMenu.addItem(.separator())
+        let stage = NSMenuItem(title: L10n.t("menu.fullScreen"),
+                               action: #selector(toggleStage), keyEquivalent: "f")
+        stage.keyEquivalentModifierMask = [.command, .control]
+        stage.target = self
+        viewMenu.addItem(stage)
+
+        let mini = NSMenuItem(title: L10n.t("menu.miniPlayer"),
+                              action: #selector(toggleMiniPlayer), keyEquivalent: "m")
+        mini.keyEquivalentModifierMask = [.command, .control]
+        mini.target = self
+        viewMenu.addItem(mini)
+
         viewMenuItem.submenu = viewMenu
         trackerMenuItem = tracker
 
         let fileMenuItem = NSMenuItem()
-        let fileMenu = NSMenu(title: "File")
-        let open = NSMenuItem(title: "Open…", action: #selector(openModules), keyEquivalent: "o")
+        let fileMenu = NSMenu(title: L10n.t("menu.file"))
+        let open = NSMenuItem(title: L10n.t("menu.open"), action: #selector(openModules), keyEquivalent: "o")
         open.target = self
         fileMenu.addItem(open)
+
+        // Filled in each time the menu is opened, so it never goes stale.
+        let recent = NSMenuItem(title: L10n.t("menu.recent"), action: nil, keyEquivalent: "")
+        let recentMenu = NSMenu(title: L10n.t("menu.recent"))
+        recentMenu.delegate = self
+        recent.submenu = recentMenu
+        recentMenu.identifier = Self.recentMenuIdentifier
+        fileMenu.addItem(recent)
         fileMenuItem.submenu = fileMenu
         mainMenu.addItem(fileMenuItem)
 
@@ -247,16 +309,78 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         // A Window menu, so the standard shortcuts still work in the Workbench
         // skin, where the system window buttons are hidden.
         let windowMenuItem = NSMenuItem()
-        let windowMenu = NSMenu(title: "Window")
-        windowMenu.addItem(withTitle: "Minimise",
+        let windowMenu = NSMenu(title: L10n.t("menu.window"))
+        windowMenu.addItem(withTitle: L10n.t("menu.minimise"),
                            action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
-        windowMenu.addItem(withTitle: "Close",
+        windowMenu.addItem(withTitle: L10n.t("menu.close"),
                            action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         windowMenuItem.submenu = windowMenu
         mainMenu.addItem(windowMenuItem)
         NSApplication.shared.windowsMenu = windowMenu
 
+        // AppKit inserts its own "Enter Full Screen" into whichever menu it
+        // takes for the View menu, and does so lazily, so it can only be taken
+        // out again just before the menu is drawn.
+        viewMenu.delegate = self
+
         NSApplication.shared.mainMenu = mainMenu
+    }
+
+    static let recentMenuIdentifier = NSUserInterfaceItemIdentifier("recentModules")
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        if menu.identifier == Self.recentMenuIdentifier {
+            MainActor.assumeIsolated { rebuildRecentMenu(menu) }
+            return
+        }
+
+        // AppKit's own full-screen item. The player window is a fixed size and
+        // refuses macOS full screen, so it only sits there greyed out next to
+        // the one that actually opens the stage.
+        for item in menu.items where item.action == Selector(("toggleFullScreen:")) {
+            menu.removeItem(item)
+        }
+    }
+
+    @MainActor
+    private func rebuildRecentMenu(_ menu: NSMenu) {
+        menu.removeAllItems()
+
+        let entries = RecentModules.entries
+        guard !entries.isEmpty else {
+            let empty = NSMenuItem(title: L10n.t("menu.recent.empty"), action: nil, keyEquivalent: "")
+            empty.isEnabled = false
+            menu.addItem(empty)
+            return
+        }
+
+        for (index, entry) in entries.enumerated() {
+            let item = NSMenuItem(title: entry.title, action: #selector(playRecent(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = entry.url
+            item.toolTip = entry.url.path
+            // The first nine get a number, as the Finder's own list does.
+            if index < 9 { item.keyEquivalent = "" }
+            menu.addItem(item)
+        }
+
+        menu.addItem(.separator())
+        let clear = NSMenuItem(title: L10n.t("menu.recent.clear"),
+                               action: #selector(clearRecent), keyEquivalent: "")
+        clear.target = self
+        menu.addItem(clear)
+    }
+
+    @objc private func playRecent(_ sender: NSMenuItem) {
+        guard let url = sender.representedObject as? URL else { return }
+        Task { @MainActor in
+            PlayerModel.shared.add(urls: [url], playFirst: false)
+            PlayerModel.shared.playRecorded(url: url)
+        }
+    }
+
+    @objc private func clearRecent() {
+        Task { @MainActor in RecentModules.clear() }
     }
 
     @objc private func openModules() {
@@ -280,6 +404,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         Task { @MainActor in
             PlayerModel.shared.filterEnabled.toggle()
         }
+    }
+
+    @objc private func showAbout() {
+        Task { @MainActor in AboutController.shared.present() }
+    }
+
+    @objc private func showSettings() {
+        Task { @MainActor in SettingsController.shared.present() }
+    }
+
+    @objc private func toggleStage() {
+        Task { @MainActor in StageController.shared.toggle() }
+    }
+
+    @objc private func toggleMiniPlayer() {
+        Task { @MainActor in MiniPlayerController.shared.toggle() }
     }
 
     @objc private func selectVisualizer(_ sender: NSMenuItem) {

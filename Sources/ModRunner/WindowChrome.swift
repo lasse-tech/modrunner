@@ -38,7 +38,11 @@ enum WindowChrome {
             )
 
         case .native:
-            window.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
+            // .resizable is here only so the green gadget is live: AppKit
+            // disables it outright on a window that cannot be resized. The size
+            // itself is pinned below, and `windowShouldZoom` turns the click
+            // into the full-screen stage.
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
             window.titlebarAppearsTransparent = false
             window.titleVisibility = .visible
             window.styleMask.remove(.fullSizeContentView)
@@ -48,8 +52,12 @@ enum WindowChrome {
             window.standardWindowButton(.closeButton)?.isHidden = false
             window.standardWindowButton(.miniaturizeButton)?.isHidden = false
             // Each skin has one fixed size, so zoom stays inert.
+            // The green gadget opens the full-screen player, through the
+            // delegate's `windowShouldZoom`. Replacing the button's own
+            // target/action does nothing — AppKit's title bar widget does not
+            // go through them.
             window.standardWindowButton(.zoomButton)?.isHidden = false
-            window.standardWindowButton(.zoomButton)?.isEnabled = false
+            window.standardWindowButton(.zoomButton)?.isEnabled = true
         }
     }
 
@@ -65,6 +73,14 @@ enum WindowChrome {
     /// resize to the bottom-left, which would make the title bar jump every
     /// time a panel is toggled or the skin changes.
     static func resize(_ window: NSWindow, to size: CGSize) {
+        // Pinned rather than merely fixed: the native skin has to carry
+        // .resizable for its zoom gadget to be clickable, and without a pin the
+        // window could then be dragged to any size the layout does not fit.
+        defer {
+            window.contentMinSize = size
+            window.contentMaxSize = size
+        }
+
         // frameRect(forContentRect:) is read against the *current* style mask,
         // so this has to run after dress() has settled it.
         let target = window.frameRect(forContentRect: NSRect(origin: .zero, size: size))

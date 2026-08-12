@@ -17,8 +17,8 @@ final class PlayerModel: ObservableObject {
     /// A window of the mixed output as it is being heard, for the waveform view.
     @Published private(set) var waveform: [Float] = []
     @Published private(set) var playlist: [Entry] = []
-    @Published private(set) var currentIndex: Int? = nil
-    @Published private(set) var status: String = "No module loaded."
+    @Published private(set) var currentIndex: Int?
+    @Published private(set) var status: String = L10n.t("status.noModuleLoaded")
     @Published var volume: Double = 0.85 {
         didSet { replayer.gain = Float(volume) }
     }
@@ -97,13 +97,13 @@ final class PlayerModel: ObservableObject {
 
             let playable = loaded.instruments.filter(\.isPlayable).count
             let midi = loaded.instruments.filter { $0.midiChannel > 0 }.count
-            var parts = ["\(loaded.formatID)",
-                         "\(loaded.blocks.count) blocks",
-                         "\(loaded.numTracks) tracks",
-                         "\(loaded.patternLines) lines",
-                         "\(loaded.noteCount) notes",
-                         "\(playable)/\(loaded.instruments.count) samples"]
-            if midi > 0 { parts.append("\(midi) MIDI (silent)") }
+            var parts = [loaded.formatID,
+                         L10n.t("status.blocks", loaded.blocks.count),
+                         L10n.t("status.tracks", loaded.numTracks),
+                         L10n.t("status.lines", loaded.patternLines),
+                         L10n.t("status.notes", loaded.noteCount),
+                         L10n.t("status.samples", playable, loaded.instruments.count)]
+            if midi > 0 { parts.append(L10n.t("status.midiSilent", midi)) }
             status = parts.joined(separator: " · ")
         } catch {
             module = nil
@@ -120,14 +120,15 @@ final class PlayerModel: ObservableObject {
             if isDirectory.boolValue {
                 let contents = (try? FileManager.default.contentsOfDirectory(
                     at: url, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
-                found.append(contentsOf: contents.filter { Self.looksLikeModule($0) }.sorted { $0.lastPathComponent < $1.lastPathComponent })
+                found.append(contentsOf: contents.filter { Self.looksLikeModule($0) }
+                    .sorted { $0.lastPathComponent < $1.lastPathComponent })
             } else if Self.looksLikeModule(url) {
                 found.append(url)
             }
         }
 
         guard !found.isEmpty else {
-            status = "No MED modules found in that drop."
+            status = L10n.t("status.noModulesFound")
             return
         }
 
@@ -161,13 +162,26 @@ final class PlayerModel: ObservableObject {
     // MARK: - Transport
 
     func play() {
-        guard module != nil else { return }
+        guard let module else { return }
         do {
             try audio.start()
             replayer.play()
+
+            // Recorded on play rather than on load: dropping a folder loads
+            // many modules and only one of them is listened to.
+            if let index = currentIndex, playlist.indices.contains(index) {
+                RecentModules.record(url: playlist[index].url, title: module.displayTitle)
+            }
         } catch {
-            status = "Audio could not start: \(error.localizedDescription)"
+            status = L10n.t("status.audioFailed", error.localizedDescription)
         }
+    }
+
+    /// Plays a module the playlist already knows about — how the recently
+    /// played menu gets back to one.
+    func playRecorded(url: URL) {
+        guard let index = playlist.firstIndex(where: { $0.url == url }) else { return }
+        select(index: index, autoplay: true)
     }
 
     func pause() { replayer.pause() }
@@ -228,7 +242,7 @@ final class PlayerModel: ObservableObject {
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = true
         panel.canChooseFiles = true
-        panel.message = "Choose MED/OctaMED modules or a folder"
+        panel.message = L10n.t("panel.chooseModules")
         if panel.runModal() == .OK {
             add(urls: panel.urls)
         }

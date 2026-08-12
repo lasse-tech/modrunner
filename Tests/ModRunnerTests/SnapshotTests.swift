@@ -93,6 +93,87 @@ final class SnapshotTests: XCTestCase {
         XCTAssertEqual(size.width, NativeSkinView.windowWidth, accuracy: 1.0)
     }
 
+    /// The full-screen stage, at a common display size. The pattern has to fill
+    /// the height: if the type size or row count is miscomputed the tracker box
+    /// ends up a stripe in the middle of an empty screen.
+    func testRenderStage() throws {
+        let directory = try outputDirectory()
+
+        let model = PlayerModel.shared
+        model.load(url: Self.moduleDirectory.appendingPathComponent("Happy Hour.med"))
+
+        let view = AmigaStageView(model: model, chromeVisible: true).frame(width: 1440, height: 900)
+        let size = try write(view, to: directory.appendingPathComponent("stage.png"))
+        XCTAssertEqual(size.width, 1440, accuracy: 1.0)
+    }
+
+    /// The stage's pattern mid-block, where there is data above the playhead as
+    /// well as below it.
+    func testRenderStageTracker() throws {
+        let directory = try outputDirectory()
+        let module = try loadExample()
+
+        let layout = StageView.layout(for: CGSize(width: 1440, height: 900), tracks: module.numTracks)
+        let view = TrackerView(module: module, block: 0, line: 30, layout: layout)
+            .frame(width: 1440 - 56)
+            .background(Amiga.screen)
+
+        try write(view, to: directory.appendingPathComponent("stage-tracker.png"))
+
+        // The playhead has to sit in the middle: equal context above and below.
+        XCTAssertGreaterThanOrEqual(layout.context, 7)
+        XCTAssertLessThanOrEqual(layout.fontSize, 34)
+    }
+
+    /// The mini player in both skins, at the fixed size its window is opened
+    /// with — the window is not resized when the skin changes, so both have to
+    /// fit the same box.
+    func testRenderMiniPlayer() throws {
+        let directory = try outputDirectory()
+
+        let model = PlayerModel.shared
+        model.load(url: Self.moduleDirectory.appendingPathComponent("Happy Hour.med"))
+
+        for skin in Skin.allCases {
+            let view = (skin == .amiga
+                        ? AnyView(AmigaMiniPlayerView(model: model))
+                        : AnyView(NativeMiniPlayerView(model: model)))
+                .frame(width: MiniPlayerView.width, height: MiniPlayerView.height)
+                .background(Amiga.screen)
+
+            let size = try write(view, to: directory.appendingPathComponent("mini-\(skin.rawValue).png"))
+            XCTAssertEqual(size.width, MiniPlayerView.width, accuracy: 1.0)
+            XCTAssertEqual(size.height, MiniPlayerView.height, accuracy: 1.0)
+        }
+    }
+
+    /// The native stage. The Workbench one is covered by `testRenderStage`.
+    func testRenderNativeStage() throws {
+        let directory = try outputDirectory()
+
+        let model = PlayerModel.shared
+        model.load(url: Self.moduleDirectory.appendingPathComponent("Happy Hour.med"))
+
+        let view = NativeStageView(model: model, chromeVisible: true)
+            .frame(width: 1440, height: 900)
+        let size = try write(view, to: directory.appendingPathComponent("stage-native.png"))
+        XCTAssertEqual(size.width, 1440, accuracy: 1.0)
+    }
+
+    /// The About panel, in both languages: German is the longer of the two and
+    /// is where the fixed 640-point width gets tested.
+    func testRenderAbout() throws {
+        let directory = try outputDirectory()
+
+        for language in [AppLanguage.english, .german] {
+            UserDefaults.standard.set(language.rawValue, forKey: AppLanguage.storageKey)
+            let size = try write(AboutView(),
+                                 to: directory.appendingPathComponent("about-\(language.rawValue).png"))
+            XCTAssertEqual(size.width, 640, accuracy: 1.0)
+        }
+        UserDefaults.standard.removeObject(forKey: AppLanguage.storageKey)
+    }
+
     func testRenderWaveform() throws {
         let directory = try outputDirectory()
 
