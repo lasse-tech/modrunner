@@ -35,21 +35,16 @@ jobs:
   # This job is what keeps that true: the app itself is macOS-only and is not
   # built here, but everything under it has to compile and pass its tests on
   # Linux and Windows.
-  portable:
-    name: Engine and CLI on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
+  # Two jobs rather than one matrix: the toolchain arrives differently on each
+  # side — Linux has an official image, Windows needs the installer action — and
+  # a matrix would only hide that behind conditionals on every step.
+  linux:
+    name: Engine and CLI on Linux
+    runs-on: ubuntu-latest
+    container: swift:6.0
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Swift
-        uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: "6.0"
 
       - name: Show toolchain
         run: swift --version
@@ -60,6 +55,28 @@ jobs:
       - name: Test
         # The snapshot suite is macOS-only and stands itself down; the loader,
         # replayer, localisation and CLI suites run here in full.
+        run: swift test
+
+  windows:
+    name: Engine and CLI on Windows
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Swift
+        uses: compnerd/gha-setup-swift@main
+        with:
+          branch: swift-6.0.3-release
+          tag: 6.0.3-RELEASE
+
+      - name: Show toolchain
+        run: swift --version
+
+      - name: Build the engine and the command line
+        run: swift build -c release --product modrunner
+
+      - name: Test
         run: swift test
 
   lint:
