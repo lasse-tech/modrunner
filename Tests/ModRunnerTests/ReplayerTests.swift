@@ -493,6 +493,24 @@ final class ReplayerTests: XCTestCase {
         return data
     }
 
+    /// Writes the synthetic module to disk so it can be played like any other
+    /// file. It otherwise only ever exists in memory during a test run.
+    func testWriteSyntheticModule() throws {
+        let path = ProcessInfo.processInfo.environment["MED_WRITE_SYNTHETIC"] ?? ""
+        try XCTSkipIf(path.isEmpty, "Set MED_WRITE_SYNTHETIC=<output .mod path>")
+
+        // A longer, more musical version than the one the loader tests use: an
+        // arpeggio over four patterns, so there is something to listen to.
+        let data = syntheticMOD(channels: 4, patterns: 4, orderLength: 8)
+        try data.write(to: URL(fileURLWithPath: path))
+        print("Wrote \(path) (\(data.count) bytes)")
+
+        // It must survive a round trip through the loader.
+        let module = try ModuleLoader.load(data: data)
+        XCTAssertEqual(module.formatID, "M.K.")
+        XCTAssertEqual(module.blocks.count, 4)
+    }
+
     func testLoadsSyntheticProTrackerModule() throws {
         let module = try ModuleLoader.load(data: syntheticMOD())
 
@@ -719,6 +737,67 @@ final class ReplayerTests: XCTestCase {
                          instrument.volume, instrument.finetune,
                          instrument.repeatStart, instrument.repeatLength))
         }
+    }
+
+    /// Compares the channel state reached by playing up to a position with the
+    /// state after seeking straight to it.
+    func testSeekReachesTheSameChannelState() throws {
+        // Defaults to a bundled example so this runs in CI; MED_SEEKTEST
+        // points it at any other module.
+        let override = ProcessInfo.processInfo.environment["MED_SEEKTEST"] ?? ""
+        let url = override.isEmpty ? moduleURL("Terminator II") : URL(fileURLWithPath: override)
+        try skipIfMissing(url)
+        let module = try ModuleLoader.load(url: url)
+        let target = Int(ProcessInfo.processInfo.environment["MED_SEEKPOS"] ?? "12") ?? 12
+
+        func instrumentsAfterPlayingTo(_ position: Int) -> [Int] {
+            let replayer = Replayer()
+            replayer.prepare(sampleRate: 44_100)
+            replayer.load(module: module)
+            replayer.play()
+            var left = [Float](repeating: 0, count: 4410)
+            var right = [Float](repeating: 0, count: 4410)
+            while replayer.snapshot().sequencePosition < position {
+                left.withUnsafeMutableBufferPointer { l in
+                    right.withUnsafeMutableBufferPointer { r in
+                        replayer.render(left: l.baseAddress!, right: r.baseAddress!, frames: 4410)
+                    }
+                }
+            }
+            // A little way into the position, so its first rows have run.
+            for _ in 0..<20 {
+                left.withUnsafeMutableBufferPointer { l in
+                    right.withUnsafeMutableBufferPointer { r in
+                        replayer.render(left: l.baseAddress!, right: r.baseAddress!, frames: 4410)
+                    }
+                }
+            }
+            return replayer.snapshot().channelInstruments
+        }
+
+        func instrumentsAfterSeekingTo(_ position: Int) -> [Int] {
+            let replayer = Replayer()
+            replayer.prepare(sampleRate: 44_100)
+            replayer.load(module: module)
+            replayer.play()
+            replayer.seek(toSequencePosition: position)
+            var left = [Float](repeating: 0, count: 4410)
+            var right = [Float](repeating: 0, count: 4410)
+            for _ in 0..<20 {
+                left.withUnsafeMutableBufferPointer { l in
+                    right.withUnsafeMutableBufferPointer { r in
+                        replayer.render(left: l.baseAddress!, right: r.baseAddress!, frames: 4410)
+                    }
+                }
+            }
+            return replayer.snapshot().channelInstruments
+        }
+
+        let played = instrumentsAfterPlayingTo(target)
+        let sought = instrumentsAfterSeekingTo(target)
+        print("SEEK played=\(played) sought=\(sought)")
+        XCTAssertEqual(played, sought,
+                       "seeking to a position must reach the same instruments as playing to it")
     }
 
     /// Traces playback position over time. Set MED_TRACE to a module path.

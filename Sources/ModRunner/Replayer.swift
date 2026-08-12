@@ -209,18 +209,54 @@ final class Replayer {
     }
 
     /// Jumps to a position in the play sequence.
+    ///
+    /// The state is rebuilt by replaying the song silently from the start.
+    /// Tracker channels carry state between rows: a note written without an
+    /// instrument number keeps whichever instrument was last set on that
+    /// channel, and the same goes for volume, finetune and the song tempo.
+    /// Jumping straight to a position left those channels holding whatever was
+    /// loaded before the jump — or nothing at all — so a track could play the
+    /// wrong sample entirely. Walking the pattern data costs a fraction of a
+    /// millisecond and gets it right.
     func seek(toSequencePosition position: Int) {
         lock.lock(); defer { lock.unlock() }
         guard !module.playSequence.isEmpty else { return }
-        sequencePosition = min(max(0, position), module.playSequence.count - 1)
-        currentBlockIndex = module.playSequence[sequencePosition]
+        let target = min(max(0, position), module.playSequence.count - 1)
+
+        resetPositionLocked()
+
+        if target > 0 {
+            // Bounded, because position jumps in the pattern data can loop.
+            var steps = 0
+            let limit = 400_000
+            while sequencePosition < target, !songEnded, steps < limit {
+                processTick()
+                steps += 1
+            }
+        }
+
+        // Land on the first line of the wanted position. The voices keep the
+        // instrument, volume and finetune they arrived with; they just must not
+        // sound whatever note was in flight.
+        sequencePosition = target
+        currentBlockIndex = module.playSequence[target]
         currentLine = 0
         tick = 0
         songEnded = false
         samplesUntilTick = 0
-        linesPlayed = linesBefore(sequencePosition: sequencePosition)
+        linesPlayed = linesBefore(sequencePosition: target)
         elapsedSamples = 0
-        silenceVoicesLocked()
+        history.reset()
+
+        for i in voices.indices {
+            voices[i].isActive = false
+            voices[i].rampedVolume = 0
+            voices[i].meter = 0
+            voices[i].noteDelayTicks = -1
+            voices[i].pendingNote = nil
+            voices[i].retriggerEvery = 0
+            voices[i].cutAtTick = -1
+        }
     }
 
     func nextPosition() { seek(toSequencePosition: currentPosition() + 1) }
