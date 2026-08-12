@@ -115,26 +115,40 @@ covered by the source licence.
 
 ## Accuracy
 
-Playback was checked against [libxmp](https://xmp.sourceforge.net/) rendering the
-same module:
+Playback is checked against [libxmp](https://xmp.sourceforge.net/) rendering the
+same module. Every figure below is over the four modules in `Examples/`, so it
+can be reproduced from a clone:
 
-| Measure | Result |
-|---|---|
-| Song duration | 207.0 s vs. 207.4 s reference |
-| Envelope correlation (20 ms windows) | **0.985**, best lag 0 ms |
-| Spectral centroid | tracks the reference within a few percent |
-| Mean spectral cosine similarity | 0.79 |
+| Module | ModRunner | libxmp | Envelope correlation | Best lag |
+|---|---|---|---|---|
+| Happy Hour | 207.34 s | 207.36 s | **0.991** | 0 ms |
+| Magic Noises | 192.62 s | 192.64 s | **0.977** | 0 ms |
+| Take it slow | 253.42 s | 253.44 s | **0.994** | 0 ms |
+| Terminator II | 245.75 s | 245.76 s | **0.909** | 0 ms |
 
-A ProTracker module was checked the same way: 255.0 s against 255.18 s,
-**0.964** envelope correlation at zero lag, and 0.93 mean spectral similarity.
+Envelope correlation is over 20 ms RMS windows. Note timing is not in question —
+every module lands within 20 ms of the reference over four minutes, and the best
+lag is zero throughout. What differs is level: the residual is the resampling
+kernel and the mixer's stereo separation. *Terminator II* is the weakest of the
+four and has not been run down to a specific effect; it is the module to reach
+for when working on mixing accuracy.
 
-The residual spectral difference is the resampling kernel and the mixer's stereo
-separation, not note timing or pitch.
+ProTracker `.mod` files run through the same replayer as MED modules — there is
+no second code path — but the figures above are MED only, since the repository
+ships no `.mod` file to measure.
+
+To reproduce, with `xmp` on the path:
+
+```sh
+make cli
+.build/debug/modrunner render "Examples/Happy Hour.med" -o /tmp/ours.wav
+xmp -q -d wav -o /tmp/reference.wav "Examples/Happy Hour.med"
+```
 
 To export a render for listening:
 
 ```sh
-make export MODULE="Examples/Take it slow.med" SECONDS=60 WAV=build/out.wav
+make render MODULE="Examples/Take it slow.med" SECONDS=60 WAV=build/out.wav
 ```
 
 ## Format documentation

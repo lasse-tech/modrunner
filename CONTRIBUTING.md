@@ -30,12 +30,15 @@ most process:
    short windows catches timing regressions that the ear will miss:
 
    ```sh
-   make export MODULE="Examples/Happy Hour.med" SECONDS=207 WAV=build/mine.wav
-   xmp -d wav -o build/ref.wav "Examples/Happy Hour.med"
+   make cli
+   .build/debug/modrunner render "Examples/Happy Hour.med" -o build/mine.wav
+   xmp -q -d wav -o build/ref.wav "Examples/Happy Hour.med"
    ```
 
-   The current baseline is an envelope correlation of 0.985 at zero lag. A change
-   that drops it needs an explanation.
+   The baseline is in `README.md`: 0.991, 0.977, 0.994 and 0.909 envelope
+   correlation for the four bundled modules, every one at zero lag and within
+   20 ms of the reference duration. A change that drops any of them needs an
+   explanation.
 3. **Add a test.** `Tests/ModRunnerTests` renders offline, so playback can be
    asserted without an audio device.
 
