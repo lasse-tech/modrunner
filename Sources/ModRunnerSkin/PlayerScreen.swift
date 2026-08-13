@@ -44,6 +44,13 @@ public struct PlayerScreen {
     public var currentIndex: Int?
     public var status = ""
 
+    /// Set while the right button is held, and nil the rest of the time: the
+    /// menu borrows the title bar rather than living anywhere.
+    public var menu: MenuSelection?
+
+    /// The About requester, which blocks the window under it while it is up.
+    public var showAbout = false
+
     public init() {}
 }
 
@@ -58,7 +65,8 @@ public enum PlayerScreenRenderer {
 
     private static let margin = 8
     private static let gap = 8
-    private static let titleBarHeight = 22
+    // Not private: the menu strip in Menu.swift borrows this bar.
+    static let titleBarHeight = 22
     private static let songHeight = 40
     private static let statusHeight = 34
     private static let meterRowHeight = 16
@@ -106,6 +114,12 @@ public enum PlayerScreenRenderer {
     public enum ControlRole {
         case previousModule, previousPosition, playPause, stop, nextPosition, nextModule
         case tracker, songPosition
+        /// The title bar. Its gadgets are the whole of the window chrome on the
+        /// platforms that hide the system one, so they have to be reachable
+        /// here rather than being pixels that happen to look like buttons.
+        case close, minimise, zoom, depth, titleBar
+        /// The About requester's OK gadget.
+        case dismissAbout
     }
 
     public struct Control {
@@ -114,8 +128,25 @@ public enum PlayerScreenRenderer {
     }
 
     public static func controls(for screen: PlayerScreen) -> [Control] {
+        // A requester blocks the window under it, the way Intuition's did. It
+        // is done by leaving the other controls out rather than by a flag the
+        // event handling has to remember, so there is nothing to forget.
+        if screen.showAbout {
+            return [Control(rect: aboutButton(for: screen), role: .dismissAbout)]
+        }
+
         let stack = panels(for: screen)
         var controls: [Control] = []
+
+        // The title bar, laid out exactly as `titleBar(_:_:y:)` draws it. The
+        // gadgets go in before the bar itself, because the bar covers them and
+        // hit testing takes the first rectangle that matches.
+        let gadget = titleBarHeight
+        controls.append(Control(rect: Rect(0, 0, gadget, gadget), role: .close))
+        controls.append(Control(rect: Rect(width - gadget * 3, 0, gadget, gadget), role: .minimise))
+        controls.append(Control(rect: Rect(width - gadget * 2, 0, gadget, gadget), role: .zoom))
+        controls.append(Control(rect: Rect(width - gadget, 0, gadget, gadget), role: .depth))
+        controls.append(Control(rect: Rect(0, 0, width, titleBarHeight), role: .titleBar))
 
         let transport = stack.transport.inset(by: Theme.bevel + 2)
         let roles: [ControlRole] = [.previousModule, .previousPosition, .playPause,
@@ -200,6 +231,14 @@ public enum PlayerScreenRenderer {
         _ = transport(&canvas, screen, stack.transport)
         _ = viewOptions(&canvas, screen, stack.viewOptions)
         _ = playlist(&canvas, screen, stack.playlist)
+
+        if screen.showAbout {
+            about(&canvas, screen)
+        }
+        // Last, so it covers what it drops over.
+        if let selection = screen.menu {
+            menuStrip(&canvas, screen, selection)
+        }
 
         return canvas
     }

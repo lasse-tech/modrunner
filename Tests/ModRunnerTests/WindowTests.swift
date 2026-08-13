@@ -124,4 +124,65 @@ final class WindowTests: XCTestCase {
         XCTAssertEqual(canvas.pixel(play.rect.x + 1, play.rect.y + 1), Theme.shine,
                        "the play button's raised edge is not where it was said to be")
     }
+
+    /// The menu is a drag from the title strip down into the items, and the
+    /// only thing standing between a press and the right action is that the
+    /// rectangles agree with the drawing. They are checked here rather than
+    /// through a window, because a menu is the same shape on every platform.
+    func testMenuDropsItsItemsInsideTheCanvas() {
+        var screen = PlayerScreen()
+        screen.playlist = ["one"]
+        let headings = PlayerScreenRenderer.menu(for: screen)
+        XCTAssertFalse(headings.isEmpty)
+
+        for index in headings.indices {
+            let box = PlayerScreenRenderer.menuBox(forHeading: index, in: screen)
+            XCTAssertGreaterThanOrEqual(box.x, 0, "a menu hangs off the left edge")
+            XCTAssertLessThanOrEqual(box.maxX, PlayerScreenRenderer.width,
+                                     "a menu hangs off the right edge")
+            XCTAssertEqual(PlayerScreenRenderer.menuEntryRects(forHeading: index, in: screen).count,
+                           headings[index].entries.count)
+        }
+    }
+
+    /// Crossing a title opens it, moving into an item picks it, and letting go
+    /// of the items leaves the title open — the pointer is still under a held
+    /// button, so closing everything would be the one thing it cannot mean.
+    func testMenuTrackingFollowsThePointer() {
+        var screen = PlayerScreen()
+        screen.playlist = ["one"]
+
+        let title = PlayerScreenRenderer.menuHeadingRects(for: screen)[1]
+        let opened = PlayerScreenRenderer.menuSelection(at: title.x + 2, y: 2,
+                                                        current: .init(), in: screen)
+        XCTAssertEqual(opened.heading, 1)
+        XCTAssertNil(opened.entry, "a title on its own picks nothing")
+
+        let second = PlayerScreenRenderer.menuEntryRects(forHeading: 1, in: screen)[1]
+        let picked = PlayerScreenRenderer.menuSelection(at: second.x + 2, y: second.y + 2,
+                                                        current: opened, in: screen)
+        XCTAssertEqual(picked.heading, 1)
+        XCTAssertEqual(picked.entry, 1)
+
+        let wandered = PlayerScreenRenderer.menuSelection(at: PlayerScreenRenderer.width - 1,
+                                                          y: second.maxY + 200,
+                                                          current: picked, in: screen)
+        XCTAssertEqual(wandered.heading, 1, "the open menu should stay open")
+        XCTAssertNil(wandered.entry, "nothing is under the pointer any more")
+    }
+
+    /// The tick is the only thing that says whether the tracker is showing, so
+    /// it has to follow the screen rather than being drawn once and forgotten.
+    func testMenuTickFollowsTheTrackerSetting() {
+        var screen = PlayerScreen()
+        screen.showTracker = true
+        var entry = PlayerScreenRenderer.menu(for: screen)
+            .flatMap(\.entries).first { if case .showTracker = $0.role { return true } else { return false } }
+        XCTAssertEqual(entry?.checked, true)
+
+        screen.showTracker = false
+        entry = PlayerScreenRenderer.menu(for: screen)
+            .flatMap(\.entries).first { if case .showTracker = $0.role { return true } else { return false } }
+        XCTAssertEqual(entry?.checked, false)
+    }
 }

@@ -16,6 +16,30 @@ final class CLITests: XCTestCase {
 
     private static let examples = ["Happy Hour", "Magic Noises", "Take it slow", "Terminator II"]
 
+    /// What the window player's Open menu hands to the playlist. A drawer is
+    /// the interesting case: the README sitting beside the modules has to be
+    /// passed over, and the order has to be the drawer's rather than the file
+    /// system's, which is nobody's idea of alphabetical.
+    func testADrawerYieldsItsModulesInNameOrder() {
+        let found = ModuleLoader.modules(in: [Self.moduleDirectory])
+        XCTAssertEqual(found.map { $0.deletingPathExtension().lastPathComponent },
+                       Self.examples,
+                       "a drawer should give up its modules, in name order, and nothing else")
+
+        let readme = Self.moduleDirectory.appendingPathComponent("README.md")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: readme.path),
+                      "the test is only meaningful while there is a non-module in there")
+        XCTAssertTrue(ModuleLoader.modules(in: [readme]).isEmpty,
+                      "a file that is not a module should be passed over")
+    }
+
+    /// One level, not the whole tree: the repository root holds the drawer but
+    /// no modules of its own.
+    func testADrawerIsNotSearchedRecursively() {
+        let root = Self.moduleDirectory.deletingLastPathComponent()
+        XCTAssertTrue(ModuleLoader.modules(in: [root]).isEmpty)
+    }
+
     /// Where the built `modrunner` is.
     ///
     /// On Apple's platforms it sits next to the test bundle. Elsewhere

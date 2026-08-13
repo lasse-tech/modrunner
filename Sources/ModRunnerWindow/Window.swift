@@ -9,6 +9,47 @@ public protocol WindowBackend: AnyObject {
     func poll() -> [WindowEvent]
     func close()
     var size: (width: Int, height: Int) { get }
+
+    /// Follows the canvas when it changes shape, so that a pixel of the picture
+    /// stays a pixel of the window. The skin has two heights — with the tracker
+    /// and without — and the hit testing works in canvas coordinates, so a
+    /// window that kept the old size would put the buttons somewhere other than
+    /// where they are drawn.
+    func resize(width: Int, height: Int)
+
+    /// What the Workbench title bar's gadgets act on. The skin draws them and
+    /// hides the system chrome, so these are the only window controls there
+    /// are; a backend that cannot do one of them does nothing, which is better
+    /// than the player having to ask what platform it is on.
+    func minimise()
+    func sendToBack()
+
+    /// Starts a title bar drag. Called when a click lands on the drawn bar
+    /// rather than on a gadget, because without system chrome nothing else
+    /// would move the window.
+    func beginDrag()
+
+    /// Asks the user for modules to add. The system's own chooser, not a drawn
+    /// one — the macOS app opens an NSOpenPanel for this, and a file requester
+    /// people already know how to drive beats a hand-made one that only looks
+    /// like 1992. Both run modal, so the picture stops until they close.
+    /// `startingAt` is where to open: the drawer the current module came from,
+    /// so the chooser lands next to the music instead of at the top of the
+    /// machine.
+    func chooseFiles(startingAt: URL?) -> [URL]
+    func chooseDrawer(startingAt: URL?) -> URL?
+}
+
+/// The window controls are optional: X11 has no implementation yet, and a
+/// backend that ignores them leaves the player exactly as it was rather than
+/// failing to build.
+extension WindowBackend {
+    public func resize(width: Int, height: Int) {}
+    public func minimise() {}
+    public func sendToBack() {}
+    public func beginDrag() {}
+    public func chooseFiles(startingAt: URL?) -> [URL] { [] }
+    public func chooseDrawer(startingAt: URL?) -> URL? { nil }
 }
 
 public enum WindowEvent: Equatable {
@@ -17,6 +58,12 @@ public enum WindowEvent: Equatable {
     case resized(width: Int, height: Int)
     case mouseDown(x: Int, y: Int)
     case mouseUp(x: Int, y: Int)
+    /// The right button and the pointer, which together are the whole of the
+    /// Intuition menu: press to raise the strip, move to pick, release to
+    /// choose. A backend that never sends them simply has no menu.
+    case rightMouseDown(x: Int, y: Int)
+    case rightMouseUp(x: Int, y: Int)
+    case mouseMoved(x: Int, y: Int)
     case key(Key)
 
     public enum Key: Equatable {

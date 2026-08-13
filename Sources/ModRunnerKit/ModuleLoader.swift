@@ -36,6 +36,32 @@ public enum ModuleLoader {
         throw MMDLoadError.tooShort
     }
 
+    /// Sifts a mixed list of files and drawers down to the modules in it.
+    ///
+    /// A drawer contributes the modules directly inside it, in name order —
+    /// not what is below that, because a music collection is a drawer of
+    /// modules and a source tree is not, and one level is the difference. What
+    /// is a module is decided by `looksLikeModule`, which reads the first bytes
+    /// rather than the name: Amiga files mostly have no extension to go on.
+    public static func modules(in urls: [URL]) -> [URL] {
+        var found: [URL] = []
+        for url in urls {
+            var isDirectory: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: url.path,
+                                                 isDirectory: &isDirectory) else { continue }
+            if isDirectory.boolValue {
+                let contents = (try? FileManager.default.contentsOfDirectory(
+                    at: url, includingPropertiesForKeys: nil,
+                    options: [.skipsHiddenFiles])) ?? []
+                found.append(contentsOf: contents.filter(looksLikeModule)
+                    .sorted { $0.lastPathComponent < $1.lastPathComponent })
+            } else if looksLikeModule(url) {
+                found.append(url)
+            }
+        }
+        return found
+    }
+
     /// Cheap sniff for the playlist, without reading the whole file.
     public static func looksLikeModule(_ url: URL) -> Bool {
         guard let handle = try? FileHandle(forReadingFrom: url) else { return false }
