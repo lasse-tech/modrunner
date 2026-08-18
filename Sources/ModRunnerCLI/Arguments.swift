@@ -31,7 +31,8 @@ struct Arguments {
     }
 
     /// Options that take a value; anything else beginning with a dash is a flag.
-    private static let valueOptions: Set<String> = ["-o", "--output", "--seconds", "--rate", "--block"]
+    private static let valueOptions: Set<String> = ["-o", "--output", "--seconds", "--rate",
+                                                    "--block", "--frames"]
 
     init(_ arguments: [String], commands: Set<String>) throws {
         var rest = arguments

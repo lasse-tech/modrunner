@@ -28,7 +28,7 @@ DRAFT          ?= 1
 DMG            := build/ModRunner-$(VERSION).dmg
 
 .DEFAULT_GOAL := help
-.PHONY: help build app run install uninstall associate associations test check export cli info render icons lint lint-fix fmt clean clear distclean signed-app dmg release notary-setup
+.PHONY: help build app run install uninstall associate associations test check export cli info render tui icons lint lint-fix fmt clean clear distclean signed-app dmg release notary-setup
 
 ## help: Show this list of targets
 help:
@@ -103,6 +103,10 @@ render: cli
 	@mkdir -p "$$(dirname "$(WAV)")"
 	@"$$(swift build -c $(CONFIG) --show-bin-path)/modrunner" render "$(MODULE)" -o "$(WAV)" \
 		$(if $(SECONDS),--seconds $(SECONDS),)
+
+## tui: Play MODULE in the terminal
+tui: cli
+	@"$$(swift build -c $(CONFIG) --show-bin-path)/modrunner" tui "$(MODULE)"
 
 ## notary-setup: Store the Apple credentials the notary service needs, once
 notary-setup:

@@ -9,6 +9,7 @@ usage:
   modrunner render <module> -o <file>          render to a 16-bit stereo WAV
   modrunner dump   <module> [--block N]        pattern data as text
   modrunner play   <module>...                 play through the audio device
+  modrunner tui    <module>...                 the player in the terminal
   modrunner screenshot <module> -o <file.png>  draw the classic interface
   modrunner window <module>...                 the classic player in a window
 
@@ -18,14 +19,22 @@ options:
   --rate <n>            sample rate, default 44100
   --filter              render through the Amiga output filter
   --block <n>           dump one block instead of all of them
-  --no-tracker          leave the tracker panel out of the screenshot
+  --no-tracker          leave the tracker panel out of the screenshot and the
+                        terminal player
+  --frames <n>          tui: write n frames as plain text instead of taking
+                        the terminal over
   --no-duration         skip the duration measurement in info, which renders
                         the module to find out
 
-Exit codes: 0 success, 1 a module failed to load, 2 no audio device.
+tui keys: SPACE play/pause · ←→ position · ↑↓ module · +− volume · T tracker
+          S stop · Q or Esc quit. The transport and the position bar take a
+          click as well.
+
+Exit codes: 0 success, 1 a module failed to load, 2 no audio device or no
+terminal.
 """
 
-let commands: Set<String> = ["info", "render", "dump", "play", "screenshot", "window"]
+let commands: Set<String> = ["info", "render", "dump", "play", "screenshot", "window", "tui"]
 let raw = Array(CommandLine.arguments.dropFirst())
 
 if raw.isEmpty || raw.contains("-h") || raw.contains("--help") {
@@ -43,6 +52,7 @@ do {
     case "play":   status = try Commands.play(arguments)
     case "screenshot": status = try Screenshot.run(arguments)
     case "window": status = try WindowPlayer.run(arguments)
+    case "tui":    status = try TerminalPlayer.run(arguments)
     default:       status = 1        // unreachable: the parser checks the set
     }
     exit(status)

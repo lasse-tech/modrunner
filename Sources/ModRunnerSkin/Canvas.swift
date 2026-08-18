@@ -18,6 +18,12 @@ public struct Rect: Equatable {
     public var maxX: Int { x + width }
     public var maxY: Int { y + height }
 
+    /// Whether a point is inside — how both players decide which control was
+    /// clicked, in pixels on one side and in character cells on the other.
+    public func contains(x: Int, y: Int) -> Bool {
+        x >= self.x && x < maxX && y >= self.y && y < maxY
+    }
+
     public func inset(by amount: Int) -> Rect {
         Rect(x + amount, y + amount,
              Swift.max(0, width - amount * 2), Swift.max(0, height - amount * 2))

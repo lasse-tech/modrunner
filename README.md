@@ -73,6 +73,9 @@ in.*
   period music was written through them. Off by default, so playback stays
   comparable with other players.
 - Opens modules passed on the command line or double-clicked in the Finder
+- **A terminal interface**, `modrunner tui` — the same panels drawn as
+  characters, with the tracker scrolling under a fixed playhead, on any platform
+  with a terminal
 
 Synthetic and hybrid instruments are parsed but stay silent — they need OctaMED's
 waveform sequencer, which is not implemented. MIDI instruments are silent too.
@@ -121,6 +124,7 @@ modrunner info   <module>...             format, size, instruments, duration
 modrunner render <module> -o out.wav     16-bit stereo WAV; -o - writes to stdout
 modrunner dump   <module> [--block N]    pattern data as text
 modrunner play   <module>...             live, needs an audio device
+modrunner tui    <module>...             the player in the terminal
 ```
 
 `info`, `render` and `dump` need nothing but a filesystem, so a collection can be
@@ -131,7 +135,76 @@ when it has none.
 ```sh
 make cli                                     # build it
 make info MODULE="Examples/Happy Hour.med"   # or run it through make
+make tui  MODULE="Examples/Happy Hour.med"   # or play it in the terminal
 ```
+
+### In the terminal
+
+`tui` is the whole player without a window: the same panels in the same order as
+the classic interface, in the same palette, drawn as characters instead of
+pixels and laid out for the terminal it is given.
+
+```
+┌─ ModRunner — Happy Hour ───────────────────────────────────────────────────┐
+│ Happy Hour                                                                 │
+│                                                                            │
+│ POS    BLOCK  LINE   TEMPO  BPM  TIME                                      │
+│ 06/27  05     21/64  33/6   125  0:41                                      │
+├─ TRACKER ──────────────────────────────────────────────────────────────────┤
+│ LN  TRACK 1      TRACK 2      TRACK 3      TRACK 4                         │
+│ 019 --- .. ....  --- .. ....  --- .. ....  --- .. ....                     │
+│ 020 A#2 01 ....  B-2 03 ....  A#2 06 ....  --- .. ....                     │
+│ 021 --- .. ....  --- .. ....  --- .. ....  --- .. ....                     │
+│ 022 A#2 01 ....  F-3 05 ....  A#2 06 ....  --- .. ....                     │
+│ 023 --- .. ....  --- .. ....  A#2 06 ....  --- .. ....                     │
+├─ LEVELS ───────────────────────────────────────────────────────────────────┤
+│ CH1 █████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+│ CH2 ███████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+│ CH3 ████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+│ CH4 ████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+├────────────────────────────────────────────────────────────────────────────┤
+│ ███████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░     06/27  0:41 │
+├────────────────────────────────────────────────────────────────────────────┤
+│  |<   <<   ||   []   >>   >|                                  VOL ████████ │
+├─ MODULES ──────────────────────────────────────────────────────────────────┤
+│ ▶ Happy Hour                                                               │
+│   Magic Noises                                                             │
+│   Take it slow                                                             │
+├────────────────────────────────────────────────────────────────────────────┤
+│ MMD0 · 15 blocks · 4 tracks · 960 lines · 1179 notes                       │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+In a terminal it is in colour, and the pattern scrolls under a fixed playhead —
+the line being played is the highlighted one, which is the bar this page cannot
+show.
+
+| | |
+|---|---|
+| `SPACE` | play / pause |
+| `←` `→` | position, back and on |
+| `↑` `↓`, `P` `N` | module, back and on |
+| `+` `−` | volume |
+| `T` | tracker panel |
+| `S` | stop |
+| `Q`, `Esc`, `Ctrl-C` | leave |
+
+The transport buttons and the position bar take a click as well. The panels come
+and go with the space on offer — the tracker takes whatever is left over, and
+below about 48×16 the player says so rather than folding itself up. Colour is
+24-bit where the terminal admits to it, the 256-colour cube otherwise, and
+`NO_COLOR` or `TERM=dumb` leaves it in reverse video.
+
+Because it is the same `PlayerScreen` the window renderer draws, the interface
+can be written out as text with no terminal at all:
+
+```sh
+modrunner tui <module> --frames 3 --seconds 2
+```
+
+That renders the module rather than playing it — no audio device, no sound, and
+the same three pictures every time — which is how the suite checks an
+interactive program.
 
 ### Other platforms
 
@@ -159,9 +232,10 @@ Both surfaces read their colours from the same place: `Palette` in
 the pixel renderer. It used to be written out four times, and the copies
 drifted.
 
-What is still missing is the layer that puts those pixels in a window and sends
-mouse and key events back; until then the macOS app is the only one you can
-click on.
+`modrunner window` puts those pixels in a window on Linux and Windows and sends
+mouse and key events back. On macOS that is the app's job, so `window` says so
+and stops — but `tui` runs everywhere, including there, and is the interface for
+a machine reached over ssh.
 
 ## Examples
 

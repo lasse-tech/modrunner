@@ -62,10 +62,14 @@ final class CLITests: XCTestCase {
     }
 
     @discardableResult
-    private func run(_ arguments: [String]) throws -> (status: Int32, out: String, err: String) {
+    private func run(_ arguments: [String],
+                     environment extra: [String: String] = [:]) throws -> (status: Int32, out: String, err: String) {
         let process = Process()
         process.executableURL = try binary()
         process.arguments = arguments
+        if !extra.isEmpty {
+            process.environment = ProcessInfo.processInfo.environment.merging(extra) { _, new in new }
+        }
 
         let out = Pipe(), err = Pipe()
         process.standardOutput = out
@@ -172,6 +176,55 @@ final class CLITests: XCTestCase {
         XCTAssertTrue(result.err.contains("no block 999"), "error was: \(result.err)")
     }
 
+    // MARK: - tui
+
+    /// `--frames` is the terminal interface with no terminal: it renders the
+    /// module rather than playing it, so it needs no device, makes no sound and
+    /// draws the same picture every time — which is the only reason a suite can
+    /// look at an interactive program at all.
+    func testTerminalPlayerDrawsAFrame() throws {
+        let result = try run(["tui", try example("Happy Hour"), "--frames", "1"],
+                             environment: ["COLUMNS": "80", "LINES": "30"])
+        XCTAssertEqual(result.status, 0, result.err)
+
+        let lines = result.out.split(whereSeparator: \.isNewline)
+        XCTAssertEqual(lines.count, 30, "a frame is as tall as the terminal")
+        XCTAssertTrue(lines.first?.hasPrefix("┌") ?? false, "first line was: \(lines.first ?? "")")
+        XCTAssertTrue(lines.last?.hasPrefix("└") ?? false, "last line was: \(lines.last ?? "")")
+        XCTAssertTrue(result.out.contains("Happy Hour"))
+        XCTAssertTrue(result.out.contains("TRACKER"))
+        XCTAssertTrue(result.out.contains("CH1"), "no level meters")
+        // The tracker draws the pattern, in the same notation `dump` uses.
+        XCTAssertTrue(result.out.contains("A#2 01"), "no note data in:\n\(result.out)")
+    }
+
+    /// Frames apart in time have to be apart in the picture, or the flipbook is
+    /// one drawing repeated and the clock in it means nothing.
+    func testTerminalPlayerAdvancesBetweenFrames() throws {
+        let result = try run(["tui", try example("Happy Hour"), "--frames", "2", "--seconds", "2"],
+                             environment: ["COLUMNS": "80", "LINES": "30"])
+        XCTAssertEqual(result.status, 0, result.err)
+
+        let frames = result.out.components(separatedBy: "\n\n")
+        XCTAssertEqual(frames.count, 2, "expected two frames")
+        XCTAssertTrue(frames[0].contains("0:00"), "the first frame is not at the start")
+        XCTAssertTrue(frames[1].contains("0:02"), "the second frame did not move on")
+    }
+
+    func testTerminalPlayerWithoutATerminalSaysSo() throws {
+        // stdout is a pipe here, which is exactly the case being tested.
+        let result = try run(["tui", try example("Happy Hour")])
+        XCTAssertEqual(result.status, 2)
+        XCTAssertTrue(result.err.contains("needs a terminal"), "error was: \(result.err)")
+        XCTAssertTrue(result.err.contains("--frames"), "the way out was not offered: \(result.err)")
+    }
+
+    func testTerminalPlayerNeedsAModule() throws {
+        let result = try run(["tui"])
+        XCTAssertEqual(result.status, 1)
+        XCTAssertTrue(result.err.contains("no module given"), "error was: \(result.err)")
+    }
+
     // MARK: - Usage
 
     func testUnknownCommandIsAnError() throws {
@@ -184,6 +237,7 @@ final class CLITests: XCTestCase {
         let result = try run(["--help"])
         XCTAssertEqual(result.status, 0)
         XCTAssertTrue(result.out.contains("modrunner info"))
+        XCTAssertTrue(result.out.contains("modrunner tui"))
     }
 }
 

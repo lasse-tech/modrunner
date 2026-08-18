@@ -6,6 +6,36 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `modrunner tui`, the player in a terminal: the same panels as the classic
+  interface — song, status fields, tracker, level meters, position bar,
+  transport and playlist — drawn as characters instead of pixels, in the
+  palette's own colours. SPACE plays, ←→ move by position, ↑↓ by module, +−
+  set the volume, T toggles the tracker, Q or Esc leave; the transport and the
+  position bar take a click as well. It works wherever there is a terminal,
+  macOS included, which is the first interactive interface the other platforms
+  have on a machine with no window server
+- `ModRunnerSkin`: `TextCanvas` and `PlayerScreenTextRenderer`, the same
+  `PlayerScreen` drawn as characters. It lays itself out for the terminal it is
+  given rather than to a fixed width, and reports where it put the controls, as
+  the pixel renderer does
+- `ModRunnerWindow`: `Terminal`, the third surface beside X11 and Win32 — raw
+  mode and the alternate screen through `termios` on Unix and the console API on
+  Windows, keys and SGR mouse reports parsed into the same `WindowEvent`s the
+  window backends produce, and a frame written as a diff so only the rows that
+  changed go down the wire
+- `modrunner tui --frames <n>` writes the interface as plain text instead of
+  taking the terminal over, advancing the module by rendering it rather than by
+  playing it — no device, no sound, and the same picture every run, which is
+  what the suite checks
+
+### Changed
+
+- `window` and `tui` share `PlayerSession`: what is loaded, what is playing and
+  what a press of the play button means are written once rather than once per
+  front end
+
 ## [1.1.0] - 2026-08-18
 
 ### Added
