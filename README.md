@@ -15,12 +15,11 @@ eight colours and no anti-aliasing had to draw.
 
 | Native | Classic |
 |---|---|
-| ![The native interface playing a ProTracker module](docs/screenshots/native.png) | ![The Classic interface playing the same module](docs/screenshots/workbench.png) |
+| ![The native interface playing a ProTracker module](docs/screenshots/native.png) | ![The Classic interface playing the same module](docs/screenshots/classic.png) |
 
 *The same module, the same replayer, the two interfaces — switchable mid-song
-with ⌘1 and ⌘2. Both screenshots still show the earlier grey version of the
-Classic interface and have yet to be retaken; the file names have not been
-changed with them.*
+from the View menu. The Classic one is shown in Ember, the palette it starts
+in.*
 
 ## What it does
 
@@ -150,11 +149,9 @@ display at all:
 modrunner screenshot <module> -o window.png    # the interface, without a window
 ```
 
-![The Classic interface drawn without a toolkit](docs/screenshots/portable-workbench.png)
+![The Classic interface drawn without a toolkit](docs/screenshots/portable-classic.png)
 
-That picture was produced by the command above, not captured from a screen. It
-too still shows the earlier grey version and needs regenerating; the file name
-has been left as it was.
+That picture was produced by the command above, not captured from a screen.
 
 Both surfaces read their colours from the same place: `Palette` in
 `ModRunnerKit`, which is plain bytes and knows nothing about SwiftUI or about
