@@ -80,7 +80,7 @@ let package = Package(
             resources: [.process("Resources")],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
-        // The Workbench interface as pixels rather than as views: no toolkit
+        // The classic interface as pixels rather than as views: no toolkit
         // under it, no window, no platform. It draws into an array and somebody
         // else puts that on a screen — which is what makes the same interface
         // possible on Linux and Windows, and what lets a test render the whole

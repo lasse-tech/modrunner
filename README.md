@@ -8,10 +8,11 @@
 ![Formats](https://img.shields.io/badge/formats-MMD0%20%C2%B7%20MMD1%20%C2%B7%20MOD-FFA997?labelColor=17130F)
 ![Languages](https://img.shields.io/badge/languages-EN%20%C2%B7%20DE-3B67A2?labelColor=17130F)
 
-A small macOS player for Amiga tracker modules — MED, OctaMED and ProTracker —
-from the late eighties and early nineties, with a second interface of its own:
+A small player for Amiga tracker modules — MED, OctaMED and ProTracker — from
+the late eighties and early nineties, with a second interface of its own:
 bevelled panels, two-pixel edges and a monospaced grid, the way a machine with
-eight colours and no anti-aliasing had to draw.
+eight colours and no anti-aliasing had to draw. The app is macOS; the engine and
+the command line also run on Linux and Windows.
 
 | Native | Classic |
 |---|---|
