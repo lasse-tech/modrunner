@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de" data-theme="incudex">
+<html lang="de" data-theme="ember">
 <head>
 <meta charset="utf-8">
 <title>ModRunner — Skin-Redesign (Mockup)</title>
@@ -10,12 +10,12 @@
    Die Formensprache ist die klassischer 16-Bit-Desktops: zwei Pixel
    Fase, Licht oben/links, Schatten unten/rechts, versenkte Anzeigen,
    erhabene Schaltflächen, Monospace-Raster. Die Farben stammen aus
-   den Design-Tokens von incudex bzw. lasse-web. Die Fenster-Gadgets
+   den Design-Tokens der Schwesterprojekte. Die Fenster-Gadgets
    sind eigene Zeichnungen, keine Nachbauten.
    ------------------------------------------------------------------ */
 
-/* === Farbfassung A — incudex (Ember / Slate) ====================== */
-:root[data-theme="incudex"] {
+/* === Farbfassung A — Glut (Ember / Slate) ========================= */
+:root[data-theme="ember"] {
   --screen:      #0C0F14;  /* Schreibtisch-Hintergrund   (Pen 0 alt: Grau)  */
   --face:        #1D242F;  /* Flächenton der Bedienteile (Pen 0)            */
   --face-dark:   #161B24;  /*                            (Pen 4)            */
@@ -37,8 +37,8 @@
   --grid:        #212B39;
 }
 
-/* === Farbfassung B — lasse-web (Neon) ============================= */
-:root[data-theme="lasse"] {
+/* === Farbfassung B — Neon ======================================== */
+:root[data-theme="neon"] {
   --screen:      #08090f;
   --face:        #12141f;
   --face-dark:   #0b0d15;
@@ -345,7 +345,7 @@ html, body {
     <span>ModRunner</span>
     <span class="mem">2.412.984 Bytes frei</span>
     <span class="spacer"></span>
-    <span class="mem" id="themeName">Fassung: incudex</span>
+    <span class="mem" id="themeName">Fassung: Glut</span>
     <div class="gadget" style="height:18px" onclick="toggleTheme()" title="Farbfassung wechseln">
       <!-- Zwei halbe Balken, gegenläufig getont: Farbwechsel. -->
       <svg width="14" height="12" viewBox="0 0 14 12">
@@ -532,8 +532,8 @@ html, body {
 'use strict';
 
 /* --- Farbfassung ------------------------------------------------- */
-const THEMES = ['incudex', 'lasse'];
-const THEME_LABEL = { incudex: 'incudex', lasse: 'lasse-web' };
+const THEMES = ['ember', 'neon'];
+const THEME_LABEL = { ember: 'Glut', neon: 'Neon' };
 
 function toggleTheme() {
   const now = document.documentElement.getAttribute('data-theme');

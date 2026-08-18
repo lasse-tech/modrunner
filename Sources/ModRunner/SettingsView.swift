@@ -8,7 +8,7 @@ import ModRunnerKit
 struct SettingsView: View {
 
     @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.system.rawValue
-    @AppStorage(Palette.storageKey) private var palette = Palette.incudex.rawValue
+    @AppStorage(Palette.storageKey) private var palette = Palette.ember.rawValue
 
     static let width: CGFloat = 420
     static let height: CGFloat = 268
@@ -64,7 +64,7 @@ struct SettingsView: View {
     /// something else made it redraw.
     private var paletteChoice: Binding<String> {
         Binding(get: { palette },
-                set: { Palette.current = Palette(rawValue: $0) ?? .incudex })
+                set: { Palette.current = Palette(rawValue: $0) ?? .ember })
     }
 }
 

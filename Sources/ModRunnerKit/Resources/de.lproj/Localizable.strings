@@ -23,6 +23,8 @@
 /* Skins und Visualisierungen */
 "skin.classic"        = "Klassisch";
 "skin.native"         = "Nativ";
+"palette.ember"       = "Glut";
+"palette.neon"        = "Neon";
 "visualizer.levels"   = "Pegel";
 "visualizer.waveform" = "Wellenform";
 

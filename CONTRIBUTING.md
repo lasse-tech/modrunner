@@ -84,7 +84,7 @@ The Classic interface exists twice, as SwiftUI in the app and as pixels in
 `ModRunnerSkin`, and a change to one of them is only half a change. Both read
 their colours from `Palette` in `ModRunnerKit`, which is the single place any
 colour value belongs; do not write a literal into a view. The two colour sets,
-`incudex` and `lasse-web`, are both dark, so the bevel runs from the lightest
+**Ember** and **Neon**, are both dark, so the bevel runs from the lightest
 frame tone down to the deepest ground rather than from white to black — check a
 change against both before proposing it.
 

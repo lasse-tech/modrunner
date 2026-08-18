@@ -184,13 +184,13 @@ final class SkinTests: XCTestCase {
             UserDefaults.standard.removePersistentDomain(forName: suite)
         }
 
-        Palette.current = .incudex
-        let incudex = PlayerScreenRenderer.render(PlayerScreen())
-        Palette.current = .lasse
-        let lasse = PlayerScreenRenderer.render(PlayerScreen())
+        Palette.current = .ember
+        let ember = PlayerScreenRenderer.render(PlayerScreen())
+        Palette.current = .neon
+        let neon = PlayerScreenRenderer.render(PlayerScreen())
 
-        XCTAssertEqual(incudex.width, lasse.width, "the palette changed the layout")
-        XCTAssertNotEqual(incudex.pixels, lasse.pixels, "the palette had no effect")
+        XCTAssertEqual(ember.width, neon.width, "the palette changed the layout")
+        XCTAssertNotEqual(ember.pixels, neon.pixels, "the palette had no effect")
     }
 
     // MARK: - Gadgets

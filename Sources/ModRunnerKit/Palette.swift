@@ -39,19 +39,19 @@ public struct PaletteColour: Sendable, Equatable, Hashable {
 /// four times — twice as literals in window code — and the two halves drifted.
 public enum Palette: String, CaseIterable, Sendable {
 
-    /// incudex: ember on slate. The default, and the closest to the ModRunner
-    /// brand orange.
-    case incudex
+    /// Ember on slate. The default, and the closest to the ModRunner brand
+    /// orange.
+    case ember
 
-    /// lasse-web: cyan and magenta on near-black. Higher contrast, colder.
-    case lasse
+    /// Cyan and magenta on near-black. Higher contrast, colder.
+    case neon
 
-    /// What the menu calls it. Both are proper names, so neither is
-    /// translated.
+    /// What the menu calls it. Both are named after the colour they are lit
+    /// with rather than after where the tokens came from, so both translate.
     public var title: String {
         switch self {
-        case .incudex: return "incudex"
-        case .lasse: return "lasse-web"
+        case .ember: return L10n.t("palette.ember")
+        case .neon: return L10n.t("palette.neon")
         }
     }
 
@@ -79,7 +79,7 @@ public enum Palette: String, CaseIterable, Sendable {
         get {
             if let cached { return cached }
             observeExternalWrites()
-            let value = Palette(rawValue: store.string(forKey: storageKey) ?? "") ?? .incudex
+            let value = Palette(rawValue: store.string(forKey: storageKey) ?? "") ?? .ember
             cached = value
             return value
         }
@@ -98,7 +98,7 @@ public enum Palette: String, CaseIterable, Sendable {
 
     /// The other one, which is what a toggle switches to.
     public var other: Palette {
-        self == .incudex ? .lasse : .incudex
+        self == .ember ? .neon : .ember
     }
 
     // MARK: - The roles
@@ -162,8 +162,8 @@ public enum Palette: String, CaseIterable, Sendable {
     /// hairline, three as a frame.
     public static let bevel = 2
 
-    private func pick(_ incudexHex: UInt32, _ lasseHex: UInt32) -> PaletteColour {
-        PaletteColour(hex: self == .incudex ? incudexHex : lasseHex)
+    private func pick(_ emberHex: UInt32, _ neonHex: UInt32) -> PaletteColour {
+        PaletteColour(hex: self == .ember ? emberHex : neonHex)
     }
 
     /// The meter ramp: cool at the bottom, hot at the top. `fraction` is where

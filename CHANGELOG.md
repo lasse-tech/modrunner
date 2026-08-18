@@ -9,17 +9,18 @@ All notable changes to this project are documented here. The format follows
 ### Added
 
 - Two colour sets for the classic interface, switchable while the app runs from
-  the View menu, from Settings, or from the button in the player's VIEW row:
-  **incudex**, ember `#F97D4E` on slate `#1D242F`, the default; and
-  **lasse-web**, cyan `#2EE6FF` and magenta `#FF3DBD` on near-black `#12141F`.
-  Both come from the design tokens of the sibling projects of the same name
+  the Classic entry of the View menu, from Settings, or from the button in the
+  player's VIEW row: **Ember**, `#F97D4E` on slate `#1D242F`, the default; and
+  **Neon**, cyan `#2EE6FF` and magenta `#FF3DBD` on near-black `#12141F`. Both
+  come from the design tokens of the sibling projects
 - `Sources/ModRunnerKit/Palette.swift`, the one place the interface colours are
   written down, as bytes and with no toolkit types in it, so the app, the pixel
   renderer and a test with no window server can all read it
 - A one-off migration of the stored defaults: `skin` = `"amiga"` becomes
-  `"classic"`, and `windowExtraHeight.amiga` / `windowOrigin.amiga` are carried
-  over to their `.classic` keys, so an existing installation keeps its skin and
-  its window where they were
+  `"classic"`, `windowExtraHeight.amiga` / `windowOrigin.amiga` are carried over
+  to their `.classic` keys, and `palette` = `"incudex"` / `"lasse"` become
+  `"ember"` / `"neon"`, so an existing installation keeps its skin, its palette
+  and its window where they were
 - `docs/redesign/mockup.html`, an HTML mockup of the redesign in both colour
   sets
 - The engine and `modrunner` build and pass their tests on Linux and Windows,

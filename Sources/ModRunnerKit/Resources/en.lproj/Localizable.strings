@@ -23,6 +23,8 @@
 /* Skins and visualisations */
 "skin.classic"        = "Classic";
 "skin.native"         = "Native";
+"palette.ember"       = "Ember";
+"palette.neon"        = "Neon";
 "visualizer.levels"   = "Levels";
 "visualizer.waveform" = "Waveform";
 

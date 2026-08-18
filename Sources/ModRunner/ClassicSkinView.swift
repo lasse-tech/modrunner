@@ -13,7 +13,7 @@ struct ClassicSkinView: View {
     /// Not read directly — it is here so a change of palette invalidates this
     /// view and every colour below it is looked up again. `Classic` reads the
     /// stored value on each body evaluation, so nothing else has to know.
-    @AppStorage(Palette.storageKey) private var paletteName = Palette.incudex.rawValue
+    @AppStorage(Palette.storageKey) private var paletteName = Palette.ember.rawValue
 
     var body: some View {
         VStack(spacing: 0) {

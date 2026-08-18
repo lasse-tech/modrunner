@@ -45,10 +45,10 @@ changed with them.*
   - **Classic** — bevelled panels, recessed readouts and a monospaced grid,
     chunky and discrete on purpose
 - **Two colour sets for the Classic interface**, switchable while it runs from
-  the View menu, from Settings or from the button in the player's VIEW row:
-  **incudex** (ember `#F97D4E` on slate `#1D242F`) and **lasse-web** (cyan
+  the Classic entry of the View menu, from Settings or from the button in the
+  player's VIEW row: **Ember** (`#F97D4E` on slate `#1D242F`) and **Neon** (cyan
   `#2EE6FF` and magenta `#FF3DBD` on near-black `#12141F`). Both are taken from
-  the design tokens of the sibling projects of the same name. Because both are
+  the design tokens of the sibling projects. Because both are
   dark, the bevel is inverted: the shine is the lightest frame tone rather than
   white, the shadow the deepest ground — the rule, light above and to the left,
   is unchanged

@@ -69,7 +69,7 @@ struct ClassicViewOptions: View {
     @ObservedObject var model: PlayerModel
     @AppStorage("showTracker") private var showTracker = true
     @AppStorage(Skin.storageKey) private var skinName = Skin.native.rawValue
-    @AppStorage(Palette.storageKey) private var paletteName = Palette.incudex.rawValue
+    @AppStorage(Palette.storageKey) private var paletteName = Palette.ember.rawValue
 
     /// Height the panel adds to the window, bevel included.
     static let height: CGFloat = 34

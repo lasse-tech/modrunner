@@ -85,7 +85,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         }
         if menuItem.action == #selector(selectPalette(_:)),
            let raw = menuItem.representedObject as? String {
-            menuItem.state = (Palette.current.rawValue == raw) ? .on : .off
+            // Only ticked when the classic skin is showing: the palette is
+            // stored either way, but nothing is drawn from it otherwise.
+            let showing = Skin.current == .classic
+            menuItem.state = (showing && Palette.current.rawValue == raw) ? .on : .off
         }
         if menuItem.action == #selector(toggleFilter) {
             menuItem.state = UserDefaults.standard.bool(forKey: "amigaFilter") ? .on : .off
@@ -277,29 +280,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         viewMenu.addItem(tracker)
         viewMenu.addItem(.separator())
 
-        // Skin switching, one number key each.
-        for (index, skin) in Skin.allCases.enumerated() {
-            let item = NSMenuItem(title: skin.title,
-                                  action: #selector(selectSkin(_:)),
-                                  keyEquivalent: "\(index + 1)")
-            item.target = self
-            item.representedObject = skin.rawValue
-            item.state = (Skin.current == skin) ? .on : .off
-            viewMenu.addItem(item)
-        }
-
-        // The colour palettes, on the same run of number keys. Only the classic
-        // skin is drawn from them, but the choice is stored either way, so it
-        // is there when that skin comes back.
-        for (index, palette) in Palette.allCases.enumerated() {
-            let item = NSMenuItem(title: palette.title,
-                                  action: #selector(selectPalette(_:)),
-                                  keyEquivalent: "\(Skin.allCases.count + index + 1)")
-            item.target = self
-            item.representedObject = palette.rawValue
-            item.state = (Palette.current == palette) ? .on : .off
-            viewMenu.addItem(item)
-        }
+        // Skin switching, one number key each, with the palettes hanging off
+        // the classic skin. `key` comes back pointing at the next free number.
+        let key = addSkinItems(to: viewMenu, startingAt: 1)
 
         viewMenu.addItem(.separator())
 
@@ -308,7 +291,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         for (index, style) in VisualizerStyle.allCases.enumerated() {
             let item = NSMenuItem(title: style.title,
                                   action: #selector(selectVisualizer(_:)),
-                                  keyEquivalent: "\(Skin.allCases.count + Palette.allCases.count + index + 1)")
+                                  keyEquivalent: "\(key + index)")
             item.target = self
             item.representedObject = style.rawValue
             item.state = (VisualizerStyle.current == style) ? .on : .off
@@ -445,6 +428,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         trackerMenuItem?.state = visible ? .on : .off
     }
 
+    /// The skins, and under the classic one its two palettes.
+    ///
+    /// The palettes belong to that skin — nothing else is drawn from them — so
+    /// they hang off it as a submenu rather than sitting beside it as two more
+    /// top-level choices that only sometimes do anything. An item with a
+    /// submenu takes neither an action nor a key equivalent, so the classic
+    /// skin is chosen by choosing one of its palettes, and the number keys run
+    /// through the submenu before carrying on. The action stays on the item
+    /// even so: it is what `validateMenuItem` matches on to keep the tick
+    /// beside the skin's name current.
+    ///
+    /// Returns the first number key it has not used.
+    private func addSkinItems(to menu: NSMenu, startingAt first: Int) -> Int {
+        var key = first
+        for skin in Skin.allCases {
+            let item = NSMenuItem(title: skin.title, action: #selector(selectSkin(_:)),
+                                  keyEquivalent: skin == .classic ? "" : "\(key)")
+            item.target = self
+            item.representedObject = skin.rawValue
+            item.state = (Skin.current == skin) ? .on : .off
+
+            if skin == .classic {
+                let palettes = NSMenu(title: skin.title)
+                for palette in Palette.allCases {
+                    let choice = NSMenuItem(title: palette.title,
+                                            action: #selector(selectPalette(_:)),
+                                            keyEquivalent: "\(key)")
+                    key += 1
+                    choice.target = self
+                    choice.representedObject = palette.rawValue
+                    choice.state = (Skin.current == skin && Palette.current == palette) ? .on : .off
+                    palettes.addItem(choice)
+                }
+                item.submenu = palettes
+            } else {
+                key += 1
+            }
+
+            menu.addItem(item)
+        }
+        return key
+    }
+
     @objc private func selectSkin(_ sender: NSMenuItem) {
         guard let raw = sender.representedObject as? String else { return }
         UserDefaults.standard.set(raw, forKey: Skin.storageKey)
@@ -457,6 +483,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         guard let raw = sender.representedObject as? String,
               let palette = Palette(rawValue: raw) else { return }
         Palette.current = palette
+        // The palettes sit inside the classic skin's menu, so picking one is
+        // also how that skin is chosen; the native skin ignores them anyway.
+        UserDefaults.standard.set(Skin.classic.rawValue, forKey: Skin.storageKey)
     }
 
     @objc private func toggleFilter() {

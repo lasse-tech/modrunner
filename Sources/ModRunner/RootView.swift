@@ -15,7 +15,7 @@ struct RootView: View {
     @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.system.rawValue
     /// Same reason: a change of palette has to repaint the classic skin, and
     /// the colours are read imperatively through `Classic`.
-    @AppStorage(Palette.storageKey) private var paletteName = Palette.incudex.rawValue
+    @AppStorage(Palette.storageKey) private var paletteName = Palette.ember.rawValue
 
     private var skin: Skin { Skin(rawValue: skinName) ?? .native }
 

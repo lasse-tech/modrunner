@@ -67,6 +67,38 @@ final class DefaultsMigrationTests: XCTestCase {
         XCTAssertEqual(defaults.string(forKey: Skin.storageKey), Skin.native.rawValue)
     }
 
+    func testTheOldPaletteNamesBecomeTheNewOnes() {
+        defaults.set("incudex", forKey: Palette.storageKey)
+        DefaultsMigration.run(defaults)
+        XCTAssertEqual(defaults.string(forKey: Palette.storageKey), Palette.ember.rawValue)
+
+        defaults.set(false, forKey: "migrated.paletteRename")
+        defaults.set("lasse", forKey: Palette.storageKey)
+        DefaultsMigration.run(defaults)
+        XCTAssertEqual(defaults.string(forKey: Palette.storageKey), Palette.neon.rawValue)
+    }
+
+    /// The palette pass has a marker of its own, so it still runs for someone
+    /// who has already been through the skin rename.
+    func testThePaletteIsCarriedAfterTheSkinPassHasRun() {
+        defaults.set(true, forKey: "migrated.classicSkinRename")
+        defaults.set("incudex", forKey: Palette.storageKey)
+
+        DefaultsMigration.run(defaults)
+
+        XCTAssertEqual(defaults.string(forKey: Palette.storageKey), Palette.ember.rawValue)
+    }
+
+    func testThePaletteRunsOnlyOnce() {
+        defaults.set("incudex", forKey: Palette.storageKey)
+        DefaultsMigration.run(defaults)
+
+        defaults.set(Palette.neon.rawValue, forKey: Palette.storageKey)
+        DefaultsMigration.run(defaults)
+
+        XCTAssertEqual(defaults.string(forKey: Palette.storageKey), Palette.neon.rawValue)
+    }
+
     /// A value already stored under the new key is the current truth; the
     /// leftover under the old one is not.
     func testAnExistingNewValueWins() {
