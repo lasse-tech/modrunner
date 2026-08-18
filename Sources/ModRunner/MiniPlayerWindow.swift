@@ -27,7 +27,7 @@ final class MiniPlayerController {
                                      styleMask: [.borderless],
                                      backing: .buffered,
                                      defer: false)
-        // The view paints its own ground — grey panel in the Workbench skin, a
+        // The view paints its own ground — a bevelled panel in the classic skin, a
         // rounded card in the native one — so the window itself stays clear.
         window.isOpaque = false
         window.backgroundColor = .clear
@@ -35,7 +35,10 @@ final class MiniPlayerController {
         // A player you keep in a corner while working is only useful if it stays
         // on top of whatever you are working in.
         window.level = .floating
-        window.isMovableByWindowBackground = true
+        // Dragged by its title row rather than by its background: a window that
+        // moves by its background never delivers the mouse-moved events its
+        // buttons' tooltips are built on.
+        window.isMovableByWindowBackground = false
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
 
         let hosting = NSHostingView(

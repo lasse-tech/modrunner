@@ -2,32 +2,6 @@ import AppKit
 import SwiftUI
 import ModRunnerKit
 
-/// Keys the stage answers to. The window turns key codes into these so the view
-/// does not have to know anything about AppKit events.
-enum StageKey {
-    case dismiss
-    case playPause
-    case nextPosition
-    case previousPosition
-    case nextModule
-    case previousModule
-}
-
-extension StageKey {
-    /// The keys the stage listens for, by virtual key code.
-    static func forKeyCode(_ code: UInt16) -> StageKey? {
-        switch code {
-        case 53, 12: return .dismiss          // esc, Q
-        case 49:     return .playPause        // space
-        case 123:    return .previousPosition // left
-        case 124:    return .nextPosition     // right
-        case 126:    return .previousModule   // up
-        case 125:    return .nextModule       // down
-        default:     return nil
-        }
-    }
-}
-
 /// A borderless window filling one screen. Deliberately not macOS's own
 /// full-screen mode: the player window is a fixed size with hand-drawn chrome,
 /// and letting AppKit resize it into a full-screen space fights every
@@ -46,9 +20,6 @@ final class StageController {
 
     private var window: StageWindow?
     private var restoreOptions: NSApplication.PresentationOptions?
-    /// The hosting view answers key events before the window ever sees them, so
-    /// the stage listens in front of the responder chain instead of behind it.
-    private var keyMonitor: Any?
 
     var isPresented: Bool { window != nil }
 
@@ -89,22 +60,12 @@ final class StageController {
         window.setFrame(screen.frame, display: true)
         window.makeKeyAndOrderFront(nil)
         self.window = window
-
-        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self, self.isPresented, let key = StageKey.forKeyCode(event.keyCode) else {
-                return event
-            }
-            self.handle(key)
-            return nil      // swallowed, so the beep does not follow
-        }
+        // The keys are `Keyboard`'s, for every window in the app; the stage only
+        // adds Esc to what they already do.
     }
 
     func dismiss() {
         guard let window else { return }
-        if let keyMonitor {
-            NSEvent.removeMonitor(keyMonitor)
-            self.keyMonitor = nil
-        }
         NSApp.presentationOptions = restoreOptions ?? []
         restoreOptions = nil
         window.orderOut(nil)
@@ -113,17 +74,5 @@ final class StageController {
         // Hand focus back to the player window rather than to whatever else
         // happens to be behind us.
         NSApp.windows.first { $0 is ModRunnerWindow }?.makeKeyAndOrderFront(nil)
-    }
-
-    private func handle(_ key: StageKey) {
-        let model = PlayerModel.shared
-        switch key {
-        case .dismiss:          dismiss()
-        case .playPause:        model.togglePlay()
-        case .nextPosition:     model.nextPosition()
-        case .previousPosition: model.previousPosition()
-        case .nextModule:       model.playNext()
-        case .previousModule:   model.playPrevious()
-        }
     }
 }

@@ -8,17 +8,69 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Two colour sets for the classic interface, switchable while the app runs from
+  the View menu, from Settings, or from the button in the player's VIEW row:
+  **incudex**, ember `#F97D4E` on slate `#1D242F`, the default; and
+  **lasse-web**, cyan `#2EE6FF` and magenta `#FF3DBD` on near-black `#12141F`.
+  Both come from the design tokens of the sibling projects of the same name
+- `Sources/ModRunnerKit/Palette.swift`, the one place the interface colours are
+  written down, as bytes and with no toolkit types in it, so the app, the pixel
+  renderer and a test with no window server can all read it
+- A one-off migration of the stored defaults: `skin` = `"amiga"` becomes
+  `"classic"`, and `windowExtraHeight.amiga` / `windowOrigin.amiga` are carried
+  over to their `.classic` keys, so an existing installation keeps its skin and
+  its window where they were
+- `docs/redesign/mockup.html`, an HTML mockup of the redesign in both colour
+  sets
 - The engine and `modrunner` build and pass their tests on Linux and Windows,
   checked on every push. The interface stays macOS only
 - Audio output is behind a backend protocol: AVFoundation on Apple's platforms,
   miniaudio everywhere else, selectable with `MODRUNNER_AUDIO_BACKEND`
-- `ModRunnerSkin`: the Workbench interface drawn into a pixel buffer with no
+- `ModRunnerSkin`: the classic interface drawn into a pixel buffer with no
   toolkit under it — palette, bevels, an 8×8 bitmap face drawn for the project,
   meters, sliders, buttons, the tracker panel and the playlist
 - `modrunner screenshot` renders that interface to a PNG without a window, which
   is how it is checked on machines that cannot yet show it
 - Note notation moved into the engine; the tracker view, `dump` and the skin had
   a copy each
+
+### Changed
+
+- The second interface is now **Classic**, an original design, and no longer a
+  re-creation of the AmigaOS 3.x Workbench. The shapes it is built from stay —
+  bevelled panels, two-pixel edges, recessed readouts, a monospaced grid — but
+  the colours, the window gadgets and the typeface are the project's own.
+  `Skin.amiga` is `Skin.classic`, shown as "Classic" / "Klassisch" under the
+  key `skin.classic`
+- The grey Workbench palette is gone, and both of the colour sets that replace
+  it are dark, which inverts the bevel: the shine is the lightest frame tone
+  (`#3A4757`, `#2B3040`) instead of white, and the shadow is the deepest ground.
+  The rule — light above and to the left — is unchanged, and is what keeps the
+  surfaces legible
+- The window gadgets are redrawn in a shape language of their own, one bar motif
+  carried through all five: close collapses a bar in three steps, 5:3:1;
+  iconify lays everything down on the baseline; zoom grows a row 1:2:3, the same
+  progression as the Fibonacci VU mark; depth is two offset plates; sizing is a
+  corner being pulled. Their positions and their functions are where the hand
+  expects them
+- The palette is one source for both surfaces — the SwiftUI app and the portable
+  pixel renderer read the same `Palette` in `ModRunnerKit`. It used to be
+  written out four times, and the copies had drifted
+- The app no longer bundles a typeface or looks for an installed Topaz. The
+  classic interface draws from the project's own 8×8 bitmap face, and the native
+  one asks for JetBrains Mono, IBM Plex Mono, Menlo, Monaco, in that order
+- The trademark notice in `README.md`, `NOTICE` and `THIRD-PARTY-NOTICES.md` no
+  longer describes the interface as a re-creation in the Workbench idiom, and
+  says instead why Amiga is named at all: the file formats and the output
+  filter. `AmigaFilter`, the `menu.amigaFilter` string and the `amigaFilter`
+  default are unchanged — they name an audio behaviour, not a skin
+
+### Removed
+
+- `AmigaTheme.swift`, `AmigaControls.swift`, `AmigaSkinView.swift` and
+  `ModRunnerSkin/Workbench.swift`, replaced by `ClassicTheme.swift`,
+  `ClassicControls.swift`, `ClassicSkinView.swift`, `SkinMetrics.swift` and
+  `ModRunnerSkin/Theme.swift`
 
 ## [1.0.0] - 2026-08-12
 

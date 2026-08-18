@@ -43,15 +43,15 @@ final class SnapshotTests: XCTestCase {
         return image.size
     }
 
-    func testRenderWorkbenchTracker() throws {
+    func testRenderClassicTracker() throws {
         let directory = try outputDirectory()
         let module = try loadExample()
 
         let view = TrackerView(module: module, block: 0, line: 12)
             .frame(width: 552)
-            .background(Amiga.grey)
+            .background(Classic.face)
 
-        let size = try write(view, to: directory.appendingPathComponent("tracker-workbench.png"))
+        let size = try write(view, to: directory.appendingPathComponent("tracker-classic.png"))
         XCTAssertEqual(size.height, TrackerView.panelHeight, accuracy: 1.0,
                        "panel height must match what the window size is computed from")
     }
@@ -70,10 +70,10 @@ final class SnapshotTests: XCTestCase {
         XCTAssertEqual(size.height, SmoothTrackerView.height + 16, accuracy: 1.0)
     }
 
-    /// The Workbench skin draws its own title bar and gadgets, because the
+    /// The classic skin draws its own title bar and gadgets, because the
     /// system chrome is hidden for it. If that bar goes missing the window has
     /// no controls at all, so it is worth asserting.
-    func testRenderWorkbenchSkin() throws {
+    func testRenderClassicSkin() throws {
         let directory = try outputDirectory()
         let module = try loadExample()
 
@@ -81,9 +81,9 @@ final class SnapshotTests: XCTestCase {
         model.load(url: Self.moduleDirectory.appendingPathComponent("Happy Hour.med"))
         XCTAssertEqual(model.module?.displayTitle, module.displayTitle)
 
-        let size = try write(AmigaSkinView(model: model),
-                             to: directory.appendingPathComponent("skin-workbench.png"))
-        XCTAssertEqual(size.width, AmigaSkinView.windowWidth, accuracy: 1.0)
+        let size = try write(ClassicSkinView(model: model),
+                             to: directory.appendingPathComponent("skin-classic.png"))
+        XCTAssertEqual(size.width, SkinMetrics.windowWidth, accuracy: 1.0)
     }
 
     func testRenderNativeSkin() throws {
@@ -106,7 +106,7 @@ final class SnapshotTests: XCTestCase {
         let model = PlayerModel.shared
         model.load(url: Self.moduleDirectory.appendingPathComponent("Happy Hour.med"))
 
-        let view = AmigaStageView(model: model, chromeVisible: true).frame(width: 1440, height: 900)
+        let view = ClassicStageView(model: model, chromeVisible: true).frame(width: 1440, height: 900)
         let size = try write(view, to: directory.appendingPathComponent("stage.png"))
         XCTAssertEqual(size.width, 1440, accuracy: 1.0)
     }
@@ -120,7 +120,7 @@ final class SnapshotTests: XCTestCase {
         let layout = StageView.layout(for: CGSize(width: 1440, height: 900), tracks: module.numTracks)
         let view = TrackerView(module: module, block: 0, line: 30, layout: layout)
             .frame(width: 1440 - 56)
-            .background(Amiga.screen)
+            .background(Classic.screen)
 
         try write(view, to: directory.appendingPathComponent("stage-tracker.png"))
 
@@ -139,11 +139,11 @@ final class SnapshotTests: XCTestCase {
         model.load(url: Self.moduleDirectory.appendingPathComponent("Happy Hour.med"))
 
         for skin in Skin.allCases {
-            let view = (skin == .amiga
-                        ? AnyView(AmigaMiniPlayerView(model: model))
+            let view = (skin == .classic
+                        ? AnyView(ClassicMiniPlayerView(model: model))
                         : AnyView(NativeMiniPlayerView(model: model)))
                 .frame(width: MiniPlayerView.width, height: MiniPlayerView.height)
-                .background(Amiga.screen)
+                .background(Classic.screen)
 
             let size = try write(view, to: directory.appendingPathComponent("mini-\(skin.rawValue).png"))
             XCTAssertEqual(size.width, MiniPlayerView.width, accuracy: 1.0)
@@ -151,7 +151,7 @@ final class SnapshotTests: XCTestCase {
         }
     }
 
-    /// The native stage. The Workbench one is covered by `testRenderStage`.
+    /// The native stage. The classic one is covered by `testRenderStage`.
     func testRenderNativeStage() throws {
         let directory = try outputDirectory()
 

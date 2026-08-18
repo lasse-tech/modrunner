@@ -9,15 +9,18 @@
 ![Languages](https://img.shields.io/badge/languages-EN%20%C2%B7%20DE-3B67A2?labelColor=17130F)
 
 A small macOS player for Amiga tracker modules — MED, OctaMED and ProTracker —
-from the late eighties and early nineties, presented in the style of the
-AmigaOS 3.x Workbench interface.
+from the late eighties and early nineties, with a second interface of its own:
+bevelled panels, two-pixel edges and a monospaced grid, the way a machine with
+eight colours and no anti-aliasing had to draw.
 
-| Native | Workbench |
+| Native | Classic |
 |---|---|
-| ![The native interface playing a ProTracker module](docs/screenshots/native.png) | ![The AmigaOS 3.x Workbench interface playing the same module](docs/screenshots/workbench.png) |
+| ![The native interface playing a ProTracker module](docs/screenshots/native.png) | ![The Classic interface playing the same module](docs/screenshots/workbench.png) |
 
 *The same module, the same replayer, the two interfaces — switchable mid-song
-with ⌘1 and ⌘2.*
+with ⌘1 and ⌘2. Both screenshots still show the earlier grey version of the
+Classic interface and have yet to be retaken; the file names have not been
+changed with them.*
 
 ## What it does
 
@@ -39,14 +42,23 @@ with ⌘1 and ⌘2.*
   switching mid-song changes nothing you hear:
   - **Native** — system materials and typography, SF Symbols, the ModRunner
     palette, a continuously scrolling tracker and animated level meters
-  - **Workbench** — the AmigaOS 3.x re-creation, chunky and discrete on purpose
+  - **Classic** — bevelled panels, recessed readouts and a monospaced grid,
+    chunky and discrete on purpose
+- **Two colour sets for the Classic interface**, switchable while it runs from
+  the View menu, from Settings or from the button in the player's VIEW row:
+  **incudex** (ember `#F97D4E` on slate `#1D242F`) and **lasse-web** (cyan
+  `#2EE6FF` and magenta `#FF3DBD` on near-black `#12141F`). Both are taken from
+  the design tokens of the sibling projects of the same name. Because both are
+  dark, the bevel is inverted: the shine is the lightest frame tone rather than
+  white, the shadow the deepest ground — the rule, light above and to the left,
+  is unchanged
 - Tracker view: the note data of the current block moving under a fixed
   playhead, in OctaMED's notation, with beat lines marked — toggle it with the
   **Tracks** button or ⌘T, and the window resizes to match
-- **Full-screen player** (⌃⌘F, or the green window gadget) — the pattern as big
-  as the display allows, scrolling under a fixed playhead, with the information
-  strips fading away while the mouse is still. Esc leaves, space plays, ←/→ move
-  by position.
+- **Full-screen player** (⌃⌘F, or the zoom gadget in the title bar) — the
+  pattern as big as the display allows, scrolling under a fixed playhead, with
+  the information strips fading away while the mouse is still. Esc leaves, space
+  plays, ←/→ move by position.
 - **Mini player** (⌃⌘M) — a floating strip that stays above other windows while
   you work
 - Both follow whichever interface is selected, in the same two styles
@@ -129,7 +141,7 @@ Windows** on every push, and `play` finds a device there through miniaudio
 installing to build it — miniaudio opens the system's audio library at run time
 rather than linking against it.
 
-The Workbench interface is being taken with them. It is drawn into an array of
+The Classic interface is being taken with them. It is drawn into an array of
 pixels by `ModRunnerSkin` — no toolkit underneath, no window, no platform — so
 it is the same picture everywhere and can be rendered on a machine with no
 display at all:
@@ -138,9 +150,17 @@ display at all:
 modrunner screenshot <module> -o window.png    # the interface, without a window
 ```
 
-![The Workbench interface drawn without a toolkit](docs/screenshots/portable-workbench.png)
+![The Classic interface drawn without a toolkit](docs/screenshots/portable-workbench.png)
 
-That picture was produced by the command above, not captured from a screen.
+That picture was produced by the command above, not captured from a screen. It
+too still shows the earlier grey version and needs regenerating; the file name
+has been left as it was.
+
+Both surfaces read their colours from the same place: `Palette` in
+`ModRunnerKit`, which is plain bytes and knows nothing about SwiftUI or about
+the pixel renderer. It used to be written out four times, and the copies
+drifted.
+
 What is still missing is the layer that puts those pixels in a window and sends
 mouse and key events back; until then the macOS app is the only one you can
 click on.
@@ -244,5 +264,16 @@ the author's own music under their own terms, described in
 Amiga, AmigaOS and Workbench are trademarks of their respective owners. MED and
 OctaMED are the work of Teijo Kinnunen / RBF Software. This project is an
 independent reimplementation and is not affiliated with, endorsed by, or derived
-from any of them. The interface is an original re-creation in the visual idiom of
-the Workbench; no Amiga artwork, icons, fonts or ROM code are included.
+from any of them.
+
+Amiga is named here for two reasons, both of them descriptive. The formats this
+player reads — MED, OctaMED, ProTracker — were written for that machine, and
+their documentation and terminology are the only accurate way to describe them.
+The switchable output filter models the analogue stages an A500 carried between
+Paula and its sockets, which is a statement about an audio circuit, not about a
+user interface.
+
+The interface is not one of those reasons. The Classic skin is an original
+design in a general idiom — bevelled surfaces, two-pixel edges, a monospaced
+grid — with its own palette, its own window gadgets and its own 8×8 bitmap face.
+No Amiga artwork, icons, fonts or ROM code are included.

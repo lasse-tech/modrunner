@@ -4,8 +4,9 @@ import ModRunnerKit
 /// The two presentations of the player. They share the model and the replayer
 /// completely; only the view layer differs.
 enum Skin: String, CaseIterable, Identifiable {
-    /// A re-creation in the AmigaOS 3.x Workbench idiom.
-    case amiga
+    /// Bevelled panels and a monospaced grid — the 16-bit idiom, drawn in the
+    /// project's own colours. See `Palette` for where those come from.
+    case classic
     /// A contemporary macOS interface, using the ModRunner brand.
     case native
 
@@ -13,8 +14,7 @@ enum Skin: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        // "Workbench" is the name of the thing it imitates, in any language.
-        case .amiga: return "Workbench"
+        case .classic: return L10n.t("skin.classic")
         case .native: return L10n.t("skin.native")
         }
     }

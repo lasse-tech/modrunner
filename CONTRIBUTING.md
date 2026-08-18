@@ -1,7 +1,8 @@
 # Contributing
 
 Thanks for taking an interest. This is a small project with a narrow scope: play
-MED and OctaMED modules on macOS, accurately, in a Workbench-flavoured window.
+MED and OctaMED modules on macOS, accurately, in a window of bevelled panels and
+a monospaced grid.
 
 ## Getting set up
 
@@ -67,8 +68,8 @@ out of the way of whatever else is on screen:
 MED_SNAPSHOT=/tmp/shots swift test --filter SnapshotTests
 ```
 
-The portable skin needs no display at all, so its output can be looked at
-anywhere:
+The portable renderer that draws the Classic interface into a pixel buffer needs
+no display at all, so its output can be looked at anywhere:
 
 ```sh
 MED_SKIN_PNG=/tmp/skin swift test --filter SkinTests
@@ -78,6 +79,14 @@ modrunner screenshot "Examples/Happy Hour.med" -o /tmp/window.png
 Those PNGs are written by an encoder that stores rather than compresses, which
 costs about 150× the size a real encoder produces. Fine for looking at, wrong
 for committing — run anything you intend to keep through a proper encoder.
+
+The Classic interface exists twice, as SwiftUI in the app and as pixels in
+`ModRunnerSkin`, and a change to one of them is only half a change. Both read
+their colours from `Palette` in `ModRunnerKit`, which is the single place any
+colour value belongs; do not write a literal into a view. The two colour sets,
+`incudex` and `lasse-web`, are both dark, so the bevel runs from the lightest
+frame tone down to the deepest ground rather than from white to black — check a
+change against both before proposing it.
 
 ## Style
 

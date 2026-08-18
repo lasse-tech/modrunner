@@ -85,7 +85,17 @@ struct AboutView: View {
 
     // MARK: - Masthead
 
+    /// The panel has no title bar; the masthead above the rule is what it is
+    /// dragged by, so the drag area sits under it and nothing in it takes a
+    /// click of its own.
     private var masthead: some View {
+        ZStack {
+            WindowDragArea()
+            mastheadContent.allowsHitTesting(false)
+        }
+    }
+
+    private var mastheadContent: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .bottom, spacing: 16) {
                 FibonacciMark()
@@ -260,6 +270,7 @@ struct AboutView: View {
                         .padding(.vertical, 9)
                         .overlay(RoundedRectangle(cornerRadius: 7).stroke(About.chipBorder, lineWidth: 1))
                 }
+                .help(L10n.t("tooltip.licences"))
 
                 Button(action: onClose) {
                     Text(L10n.t("about.button.close"))
@@ -272,6 +283,7 @@ struct AboutView: View {
                 // Esc, because the panel is a dialog and has no title bar of
                 // its own to close from.
                 .keyboardShortcut(.cancelAction)
+                .help(L10n.t("tooltip.aboutClose"))
             }
             .buttonStyle(.plain)
         }
@@ -321,7 +333,10 @@ final class AboutController {
                                      defer: false)
         window.backgroundColor = NSColor(calibratedRed: 0x17 / 255, green: 0x13 / 255,
                                          blue: 0x0F / 255, alpha: 1)
-        window.isMovableByWindowBackground = true
+        // Dragged by its masthead, not by its background: a window that moves by
+        // its background swallows the mouse-moved events, and the two buttons in
+        // the footer would never show their help.
+        window.isMovableByWindowBackground = false
         window.contentView = hosting
         window.isReleasedWhenClosed = false
         window.center()

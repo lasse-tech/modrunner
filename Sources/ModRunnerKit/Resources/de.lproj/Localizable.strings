@@ -21,6 +21,7 @@
 "menu.miniPlayer"     = "Mini-Player";
 
 /* Skins und Visualisierungen */
+"skin.classic"        = "Klassisch";
 "skin.native"         = "Nativ";
 "visualizer.levels"   = "Pegel";
 "visualizer.waveform" = "Wellenform";
@@ -42,6 +43,7 @@
 /* Kennzahlen */
 "stat.position" = "Position";
 "stat.block"    = "Block";
+"stat.line"     = "Zeile";
 "stat.tempo"    = "Tempo";
 
 /* Statuszeile */
@@ -67,9 +69,21 @@
 "tooltip.filterOff"   = "Amiga-Ausgangsfilter aus — zum Einschalten klicken";
 "tooltip.channelMuted"   = "Kanal %d stumm — klicken zum Aufheben, Doppelklick für Solo";
 "tooltip.channelUnmuted" = "Kanal %d stummschalten, Doppelklick für Solo";
+"tooltip.playPrevious"   = "Vorheriges Modul";
+"tooltip.previousBlock"  = "Eine Position zurück";
+"tooltip.play"           = "Abspielen";
+"tooltip.pause"          = "Pause";
+"tooltip.stop"           = "Stopp";
+"tooltip.nextBlock"      = "Eine Position weiter";
+"tooltip.playNext"       = "Nächstes Modul";
+"tooltip.open"           = "Module oder einen Ordner öffnen…";
+"tooltip.tracks"         = "Tracker ein- oder ausblenden";
+"tooltip.visualizer"     = "Visualisierung wählen";
+"tooltip.licences"       = "Die Lizenzen der zugrunde liegenden Arbeit zeigen";
+"tooltip.aboutClose"     = "Dieses Fenster schließen";
 
 /* Vollbild */
-"stage.keys" = "ESC  zurück    LEER  Play/Pause    ←/→  Position";
+"stage.keys" = "ESC  zurück    LEER  Play/Pause    ←/→  Position    ⇧←/→  Modul";
 
 /* Einstellungen */
 "settings.title"           = "Einstellungen";
@@ -78,6 +92,8 @@
 "settings.language.en"     = "Englisch";
 "settings.language.de"     = "Deutsch";
 "settings.languageNote"    = "ModRunner folgt der Systemsprache, solange hier nichts gewählt ist.";
+"settings.palette"         = "Farbfassung";
+"settings.paletteNote"     = "Gilt für die klassische Oberfläche. Die native folgt dem Erscheinungsbild des Systems.";
 
 /* Fehler */
 "error.tooShort"          = "Die Datei ist zu kurz für ein MED-Modul.";
@@ -110,7 +126,8 @@
 "button.filter"      = "LED";
 "button.fullScreen"  = "Voll";
 "button.miniPlayer"  = "Mini";
-"tooltip.switchSkin" = "Zu %@ wechseln";
+"tooltip.switchSkin"    = "Zu %@ wechseln";
+"tooltip.switchPalette" = "Farbfassung %@ verwenden";
 "tooltip.expand"     = "Zurück zum vollen Player";
 "menu.recent"        = "Zuletzt gespielt";
 "menu.recent.clear"  = "Liste löschen";

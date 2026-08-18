@@ -9,8 +9,27 @@ struct NativeSkinView: View {
     static let windowWidth: CGFloat = 640
     private static let baseHeight: CGFloat = 512 + 30
 
+    /// The height the window opens at, before the user has dragged it.
     static func windowHeight(showingTracker: Bool) -> CGFloat {
         showingTracker ? baseHeight + SmoothTrackerView.height + 26 : baseHeight
+    }
+
+    /// One row of the module list: the title, its padding, and the gap to the
+    /// next row.
+    private static let playlistRow: CGFloat = 24
+    /// How tall the list is at the height the window opens at.
+    private static let playlistHeight: CGFloat = 220
+    /// The shortest list worth keeping: three entries, whole. Below that the
+    /// list stops being a list, and it scrolls anyway.
+    private static let playlistFloor: CGFloat = 3 * playlistRow + 8
+
+    /// How far the window can be dragged shorter than its opening height.
+    /// Everything above the module list is laid out at a fixed height, so the
+    /// whole allowance comes out of the list.
+    static let playlistFlex: CGFloat = playlistHeight - playlistFloor
+
+    static func minimumHeight(showingTracker: Bool) -> CGFloat {
+        windowHeight(showingTracker: showingTracker) - playlistFlex
     }
 
     @ObservedObject var model: PlayerModel
@@ -37,8 +56,12 @@ struct NativeSkinView: View {
             playlist
         }
         .padding(18)
-        .frame(width: NativeSkinView.windowWidth,
-               height: NativeSkinView.windowHeight(showingTracker: showTracker))
+        // The width is the layout's; the height is the window's, and whatever it
+        // is, the module list takes up the slack.
+        .frame(minWidth: NativeSkinView.windowWidth,
+               maxWidth: NativeSkinView.windowWidth,
+               maxHeight: .infinity,
+               alignment: .top)
         .background(.background)
         .overlay {
             if isDropTarget {
@@ -95,15 +118,30 @@ struct NativeSkinView: View {
             .trimmingCharacters(in: .whitespaces) ?? ""
         if !annotation.isEmpty, annotation != module.displayTitle { parts.append(annotation) }
         parts.append(module.formatID)
-        parts.append("\(module.numTracks) tracks")
-        parts.append("\(module.noteCount) notes")
+        parts.append(L10n.t("status.tracks", module.numTracks))
+        parts.append(L10n.t("status.notes", module.noteCount))
         return parts.joined(separator: "  ·  ")
     }
 
     // MARK: - Meters and statistics
 
+    /// The readings on the left, the visualisation and its picker on the right,
+    /// all hung from one line: the row is exactly as tall as the visualiser's
+    /// box, and everything in it is aligned to the top of that box.
     private var meterRow: some View {
-        HStack(alignment: .bottom, spacing: 20) {
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                stat(L10n.t("stat.position"), positionText)
+                stat(L10n.t("stat.block"), model.module == nil ? "—" : "\(model.snapshot.block)")
+                stat(L10n.t("stat.line"), model.module == nil
+                     ? "—" : "\(model.snapshot.line) / \(model.snapshot.lineCount)")
+                stat(L10n.t("stat.tempo"), "\(model.snapshot.tempo) · \(model.snapshot.ticksPerLine) TPL"
+                     + String(format: " · %.0f BPM", model.snapshot.beatsPerMinute))
+                Spacer(minLength: 0)
+            }
+            .font(.system(size: 11))
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+
             VisualizerView(style: visualizer,
                            levels: model.snapshot.channelMeters,
                            samples: model.waveform,
@@ -111,23 +149,12 @@ struct NativeSkinView: View {
                            onToggleMute: { model.toggleMute(channel: $0) },
                            onSolo: { model.soloChannel($0) })
 
-            VStack(alignment: .leading, spacing: 6) {
-                stat(L10n.t("stat.position"), positionText)
-                stat(L10n.t("stat.block"), model.module == nil ? "—" : "\(model.snapshot.block)")
-                stat("Line", model.module == nil
-                     ? "—" : "\(model.snapshot.line) / \(model.snapshot.lineCount)")
-                stat(L10n.t("stat.tempo"), "\(model.snapshot.tempo) · \(model.snapshot.ticksPerLine) TPL"
-                     + String(format: " · %.0f BPM", model.snapshot.beatsPerMinute))
-            }
-            .font(.system(size: 11))
-
-            Spacer(minLength: 0)
-
             VisualizerPicker(style: Binding(
                 get: { visualizer },
                 set: { visualizerName = $0.rawValue }
             ))
         }
+        .frame(height: VisualizerView.height)
     }
 
     private func stat(_ label: String, _ value: String) -> some View {
@@ -147,13 +174,20 @@ struct NativeSkinView: View {
             Scrubber(value: model.snapshot.progress) { model.seek(fraction: $0) }
 
             HStack(spacing: 10) {
-                TransportButton(symbol: "backward.end.fill") { model.playPrevious() }
-                TransportButton(symbol: "backward.fill") { model.previousPosition() }
+                TransportButton(symbol: "backward.end.fill",
+                                help: L10n.t("tooltip.playPrevious")) { model.playPrevious() }
+                TransportButton(symbol: "backward.fill",
+                                help: L10n.t("tooltip.previousBlock")) { model.previousPosition() }
                 TransportButton(symbol: model.snapshot.isPlaying ? "pause.fill" : "play.fill",
-                                prominent: true) { model.togglePlay() }
-                TransportButton(symbol: "stop.fill") { model.stop() }
-                TransportButton(symbol: "forward.fill") { model.nextPosition() }
-                TransportButton(symbol: "forward.end.fill") { model.playNext() }
+                                prominent: true,
+                                help: L10n.t(model.snapshot.isPlaying ? "tooltip.pause" : "tooltip.play")) {
+                    model.togglePlay()
+                }
+                TransportButton(symbol: "stop.fill", help: L10n.t("tooltip.stop")) { model.stop() }
+                TransportButton(symbol: "forward.fill",
+                                help: L10n.t("tooltip.nextBlock")) { model.nextPosition() }
+                TransportButton(symbol: "forward.end.fill",
+                                help: L10n.t("tooltip.playNext")) { model.playNext() }
 
                 Spacer(minLength: 12)
 
@@ -201,6 +235,7 @@ struct NativeSkinView: View {
                 Button(L10n.t("button.open")) { model.openPanel() }
                     .buttonStyle(.link)
                     .font(.system(size: 11))
+                    .help(L10n.t("tooltip.open"))
             }
 
             ScrollView {

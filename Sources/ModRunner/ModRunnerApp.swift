@@ -3,7 +3,7 @@ import AppKit
 import ModRunnerKit
 
 /// The window is built by hand rather than through a SwiftUI `Window` scene.
-/// The Amiga title bar replaces the macOS one, and a scene that has its standard
+/// The drawn title bar replaces the macOS one, and a scene that has its standard
 /// window buttons hidden does not reliably present itself; owning the NSWindow
 /// keeps the size, position and chrome fully under our control.
 @main
@@ -31,7 +31,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         WindowChrome.saveOrigin(of: window, for: Skin.current)
     }
 
-    /// The green gadget opens the stage. Each skin has exactly one size, so
+    /// The height is the user's to choose, and it is remembered per skin. This
+    /// runs when the drag ends rather than on every frame of it: saving writes a
+    /// default, and the observer on that redresses the window — not something to
+    /// do underneath a resize in progress.
+    func windowDidEndLiveResize(_ notification: Notification) {
+        guard positionRestored, let window = notification.object as? NSWindow else { return }
+        WindowChrome.saveHeight(of: window, for: Skin.current)
+    }
+
+    /// Resizes that never went through a drag — a window manager, an
+    /// accessibility client, a display that changed under the window — end up
+    /// here instead, and are worth keeping just the same.
+    ///
+    /// Not during a drag, though: saving writes a default, and the observer on
+    /// that redresses the window. Both that and the save itself now stop when
+    /// nothing has actually changed, which is what keeps this from recursing;
+    /// staying out of a live resize keeps it from doing the work sixty times a
+    /// second as well.
+    func windowDidResize(_ notification: Notification) {
+        guard positionRestored, let window = notification.object as? NSWindow,
+              !window.inLiveResize else { return }
+        WindowChrome.saveHeight(of: window, for: Skin.current)
+    }
+
+    /// The green gadget opens the stage. Each skin has exactly one width, so
     /// there is nothing to zoom to; returning false leaves the window alone.
     func windowShouldZoom(_ window: NSWindow, toFrame newFrame: NSRect) -> Bool {
         MainActor.assumeIsolated { StageController.shared.toggle() }
@@ -53,11 +77,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     /// Keeps the menu's tick mark in step when the Tracks button is used.
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         if menuItem.action == #selector(toggleTracker) {
-            menuItem.state = AmigaSkinView.trackerVisiblePreference ? .on : .off
+            menuItem.state = SkinMetrics.trackerVisiblePreference ? .on : .off
         }
         if menuItem.action == #selector(selectSkin(_:)),
            let raw = menuItem.representedObject as? String {
             menuItem.state = (Skin.current.rawValue == raw) ? .on : .off
+        }
+        if menuItem.action == #selector(selectPalette(_:)),
+           let raw = menuItem.representedObject as? String {
+            menuItem.state = (Palette.current.rawValue == raw) ? .on : .off
         }
         if menuItem.action == #selector(toggleFilter) {
             menuItem.state = UserDefaults.standard.bool(forKey: "amigaFilter") ? .on : .off
@@ -81,9 +109,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     private var menuLanguage: AppLanguage = .system
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Before anything reads a default: the classic skin's stored value and
+        // two window keys were renamed with it, and a stale key read once is a
+        // setting silently lost.
+        DefaultsMigration.run()
+
         buildMenu()
         buildWindow()
         Task { @MainActor in MediaKeys.shared.start() }
+        Keyboard.start()
 
         // Files handed over on the command line, e.g. from `open --args`.
         let paths = CommandLine.arguments.dropFirst().filter { !$0.hasPrefix("-") }
@@ -111,11 +145,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     // MARK: - Window
 
     private func buildWindow() {
-        // Start at whichever size matches the stored skin and tracker
-        // preference, so the window does not visibly resize itself a moment
-        // after opening.
-        let size = NSSize(width: RootView.initialSize().width,
-                          height: RootView.initialSize().height)
+        // Start at whichever size matches the stored skin, tracker preference
+        // and dragged height, so the window does not visibly resize itself a
+        // moment after opening.
+        let target = WindowChrome.targetSize()
+        let size = NSSize(width: target.width, height: target.height)
         let window = ModRunnerWindow(
             contentRect: NSRect(origin: .zero, size: size),
             styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
@@ -130,7 +164,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
 
         // ignoresSafeArea keeps SwiftUI from insetting the content below the
         // (transparent) macOS title bar, which would leave a grey strip above
-        // the Workbench title bar.
+        // the drawn title bar.
         // NSHostingView publishes Auto Layout constraints derived from the
         // SwiftUI ideal size, and those win over setContentSize — which shrank
         // the window to a stamp. Hosting it inside a plain autoresizing
@@ -239,7 +273,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         let tracker = NSMenuItem(title: L10n.t("menu.showTracker"),
                                  action: #selector(toggleTracker), keyEquivalent: "t")
         tracker.target = self
-        tracker.state = AmigaSkinView.trackerVisiblePreference ? .on : .off
+        tracker.state = SkinMetrics.trackerVisiblePreference ? .on : .off
         viewMenu.addItem(tracker)
         viewMenu.addItem(.separator())
 
@@ -254,13 +288,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             viewMenu.addItem(item)
         }
 
+        // The colour palettes, on the same run of number keys. Only the classic
+        // skin is drawn from them, but the choice is stored either way, so it
+        // is there when that skin comes back.
+        for (index, palette) in Palette.allCases.enumerated() {
+            let item = NSMenuItem(title: palette.title,
+                                  action: #selector(selectPalette(_:)),
+                                  keyEquivalent: "\(Skin.allCases.count + index + 1)")
+            item.target = self
+            item.representedObject = palette.rawValue
+            item.state = (Palette.current == palette) ? .on : .off
+            viewMenu.addItem(item)
+        }
+
         viewMenu.addItem(.separator())
 
-        // Visualisations continue the number-key run after the skins.
+        // Visualisations continue the number-key run after the skins and the
+        // palettes.
         for (index, style) in VisualizerStyle.allCases.enumerated() {
             let item = NSMenuItem(title: style.title,
                                   action: #selector(selectVisualizer(_:)),
-                                  keyEquivalent: "\(Skin.allCases.count + index + 1)")
+                                  keyEquivalent: "\(Skin.allCases.count + Palette.allCases.count + index + 1)")
             item.target = self
             item.representedObject = style.rawValue
             item.state = (VisualizerStyle.current == style) ? .on : .off
@@ -308,7 +356,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
 
         mainMenu.addItem(viewMenuItem)
 
-        // A Window menu, so the standard shortcuts still work in the Workbench
+        // A Window menu, so the standard shortcuts still work in the classic
         // skin, where the system window buttons are hidden.
         let windowMenuItem = NSMenuItem()
         let windowMenu = NSMenu(title: L10n.t("menu.window"))
@@ -392,7 +440,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     /// Mirrors the Tracks button. Both write the same preference, which the
     /// view observes through @AppStorage.
     @objc private func toggleTracker() {
-        let visible = !AmigaSkinView.trackerVisiblePreference
+        let visible = !SkinMetrics.trackerVisiblePreference
         UserDefaults.standard.set(visible, forKey: "showTracker")
         trackerMenuItem?.state = visible ? .on : .off
     }
@@ -400,6 +448,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     @objc private func selectSkin(_ sender: NSMenuItem) {
         guard let raw = sender.representedObject as? String else { return }
         UserDefaults.standard.set(raw, forKey: Skin.storageKey)
+    }
+
+    /// Through `Palette.current` rather than straight at the default: the
+    /// setter is what refreshes the cached value the colours are read from, and
+    /// writing round it would leave the window a frame behind.
+    @objc private func selectPalette(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String,
+              let palette = Palette(rawValue: raw) else { return }
+        Palette.current = palette
     }
 
     @objc private func toggleFilter() {

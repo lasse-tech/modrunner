@@ -15,15 +15,28 @@ enum ViewOptions {
 
     /// The skin the toggle would switch to.
     static var otherSkin: Skin {
-        skin == .amiga ? .native : .amiga
+        skin == .classic ? .native : .classic
     }
 
     static func toggleSkin() {
         skin = otherSkin
     }
 
+    /// The colour palette. Only the classic skin is drawn from it — the native
+    /// one follows the system — but the menu item is always live, so switching
+    /// it while the native skin is showing does the sensible thing and takes
+    /// effect the moment the classic skin comes back.
+    static var palette: Palette {
+        get { Palette.current }
+        set { Palette.current = newValue }
+    }
+
+    static func togglePalette() {
+        palette = palette.other
+    }
+
     static var trackerVisible: Bool {
-        get { AmigaSkinView.trackerVisiblePreference }
+        get { SkinMetrics.trackerVisiblePreference }
         set { UserDefaults.standard.set(newValue, forKey: "showTracker") }
     }
 
@@ -44,47 +57,63 @@ enum ViewOptions {
     }
 }
 
-// MARK: - Workbench
+// MARK: - Classic
 
-/// The row of gadgets that mirrors the View menu, in Intuition's idiom.
-struct AmigaViewOptions: View {
+/// The row of gadgets that mirrors the View menu.
+///
+/// One row, fixed boxes, no wrapping — the widths below are chosen so the
+/// German labels fit at the window's one width. Anything longer shrinks a
+/// little rather than reflowing onto a second line.
+struct ClassicViewOptions: View {
 
     @ObservedObject var model: PlayerModel
     @AppStorage("showTracker") private var showTracker = true
     @AppStorage(Skin.storageKey) private var skinName = Skin.native.rawValue
+    @AppStorage(Palette.storageKey) private var paletteName = Palette.incudex.rawValue
 
     /// Height the panel adds to the window, bevel included.
     static let height: CGFloat = 34
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 5) {
             Text(L10n.t("player.view"))
-                .font(Amiga.font(9))
-                .foregroundColor(Amiga.black)
+                .font(Classic.font(9))
+                .foregroundColor(Classic.caption)
+                .fixedSize()
 
-            AmigaButton(label: ViewOptions.otherSkin.title, width: 96) {
+            ClassicButton(label: ViewOptions.otherSkin.title, width: 78,
+                          help: L10n.t("tooltip.switchSkin", ViewOptions.otherSkin.title)) {
                 ViewOptions.toggleSkin()
             }
 
-            AmigaButton(label: L10n.t("button.tracks"), width: 62) {
+            ClassicButton(label: ViewOptions.palette.other.title, width: 78,
+                          help: L10n.t("tooltip.switchPalette", ViewOptions.palette.other.title)) {
+                ViewOptions.togglePalette()
+            }
+
+            ClassicButton(label: L10n.t("button.tracks"), width: 62, on: showTracker,
+                          help: L10n.t("tooltip.tracks")) {
                 showTracker.toggle()
             }
 
-            AmigaButton(label: L10n.t("button.filter"), width: 46) {
+            ClassicButton(label: L10n.t("button.filter"), width: 42, on: model.filterEnabled,
+                          help: L10n.t(model.filterEnabled ? "tooltip.filterOn" : "tooltip.filterOff")) {
                 model.filterEnabled.toggle()
             }
 
             Spacer(minLength: 4)
 
-            AmigaButton(label: L10n.t("button.fullScreen"), width: 62) {
+            ClassicButton(label: L10n.t("button.fullScreen"), width: 56,
+                          help: L10n.t("menu.fullScreen")) {
                 ViewOptions.toggleStage()
             }
 
-            AmigaButton(label: L10n.t("button.miniPlayer"), width: 52) {
+            ClassicButton(label: L10n.t("button.miniPlayer"), width: 50,
+                          help: L10n.t("menu.miniPlayer")) {
                 ViewOptions.toggleMiniPlayer()
             }
         }
-        .amigaBevel(.raised)
+        .classicBevel(.raised)
     }
 }
 

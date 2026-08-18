@@ -20,38 +20,48 @@ final class SkinTests: XCTestCase {
     // MARK: - Canvas
 
     func testDrawingClipsRatherThanCrashing() {
-        var canvas = Canvas(width: 8, height: 8, fill: Workbench.black)
-        canvas.fill(Rect(-10, -10, 4, 4), Workbench.white)
-        canvas.fill(Rect(6, 6, 100, 100), Workbench.white)
-        canvas.set(-1, -1, Workbench.blue)
-        canvas.set(1_000, 1_000, Workbench.blue)
+        var canvas = Canvas(width: 8, height: 8, fill: Theme.shadow)
+        canvas.fill(Rect(-10, -10, 4, 4), Theme.shine)
+        canvas.fill(Rect(6, 6, 100, 100), Theme.shine)
+        canvas.set(-1, -1, Theme.highlight)
+        canvas.set(1_000, 1_000, Theme.highlight)
 
-        XCTAssertEqual(canvas.pixel(0, 0), Workbench.black)
-        XCTAssertEqual(canvas.pixel(7, 7), Workbench.white)
+        XCTAssertEqual(canvas.pixel(0, 0), Theme.shadow)
+        XCTAssertEqual(canvas.pixel(7, 7), Theme.shine)
     }
 
-    /// Intuition's rule: light on top and left, dark on bottom and right, and
-    /// the other way round for a recess. Getting this backwards is the single
-    /// most visible way to draw a Workbench interface wrong.
+    /// Light on top and left, dark on bottom and right, and the other way
+    /// round for a recess. Getting this backwards is the single most visible
+    /// way to draw a bevelled interface wrong — and on a dark palette, where
+    /// the "light" edge is only the lightest frame tone, it is also the
+    /// easiest to get backwards without noticing.
     func testBevelsFaceTheRightWay() {
         var canvas = Canvas(width: 20, height: 20)
         canvas.bevel(Rect(0, 0, 20, 20), .raised)
-        XCTAssertEqual(canvas.pixel(10, 0), Workbench.white)
-        XCTAssertEqual(canvas.pixel(0, 10), Workbench.white)
-        XCTAssertEqual(canvas.pixel(10, 19), Workbench.black)
-        XCTAssertEqual(canvas.pixel(19, 10), Workbench.black)
+        XCTAssertEqual(canvas.pixel(10, 0), Theme.shine)
+        XCTAssertEqual(canvas.pixel(0, 10), Theme.shine)
+        XCTAssertEqual(canvas.pixel(10, 19), Theme.shadow)
+        XCTAssertEqual(canvas.pixel(19, 10), Theme.shadow)
 
         canvas.bevel(Rect(0, 0, 20, 20), .recessed)
-        XCTAssertEqual(canvas.pixel(10, 0), Workbench.black)
-        XCTAssertEqual(canvas.pixel(10, 19), Workbench.white)
+        XCTAssertEqual(canvas.pixel(10, 0), Theme.shadow)
+        XCTAssertEqual(canvas.pixel(10, 19), Theme.shine)
     }
 
     func testMeterFillsToTheRightEdge() {
         var canvas = Canvas(width: 100, height: 12)
         canvas.meter(Rect(0, 0, 100, 12), level: 1)
         // Every cell lit means the far end is lit too, not left over as
-        // background because the cell width did not divide evenly.
-        XCTAssertEqual(canvas.pixel(96, 6), Workbench.blue)
+        // background because the cell width did not divide evenly. The last
+        // cells are at the top of the ramp, so this is the peak colour rather
+        // than the body of the meter.
+        XCTAssertEqual(canvas.pixel(96, 6), Theme.meterPeak)
+    }
+
+    func testMeterLeavesUnlitCellsAlone() {
+        var canvas = Canvas(width: 100, height: 12)
+        canvas.meter(Rect(0, 0, 100, 12), level: 0)
+        XCTAssertEqual(canvas.pixel(96, 6), Theme.meterOff)
     }
 
     // MARK: - Font
@@ -75,20 +85,20 @@ final class SkinTests: XCTestCase {
     }
 
     func testTextLandsWhereItIsPut() {
-        var canvas = Canvas(width: 40, height: 16, fill: Workbench.grey)
-        canvas.text("I", at: 0, 0, Workbench.black)
+        var canvas = Canvas(width: 40, height: 16, fill: Theme.face)
+        canvas.text("I", at: 0, 0, Theme.shadow)
         // The I is a five-pixel bar across the top row of its cell.
-        XCTAssertEqual(canvas.pixel(1, 0), Workbench.black)
-        XCTAssertEqual(canvas.pixel(0, 0), Workbench.grey)
+        XCTAssertEqual(canvas.pixel(1, 0), Theme.shadow)
+        XCTAssertEqual(canvas.pixel(0, 0), Theme.face)
         // Nothing spills into the next cell.
-        XCTAssertEqual(canvas.pixel(8, 0), Workbench.grey)
+        XCTAssertEqual(canvas.pixel(8, 0), Theme.face)
     }
 
     func testTextIsClippedToItsWidth() {
-        var canvas = Canvas(width: 64, height: 16, fill: Workbench.grey)
-        canvas.text("IIIIIIII", at: 0, 0, Workbench.black, maxWidth: 16)
-        XCTAssertEqual(canvas.pixel(1, 0), Workbench.black)
-        XCTAssertEqual(canvas.pixel(17, 0), Workbench.grey, "text ran past its width")
+        var canvas = Canvas(width: 64, height: 16, fill: Theme.face)
+        canvas.text("IIIIIIII", at: 0, 0, Theme.shadow, maxWidth: 16)
+        XCTAssertEqual(canvas.pixel(1, 0), Theme.shadow)
+        XCTAssertEqual(canvas.pixel(17, 0), Theme.face, "text ran past its width")
     }
 
     // MARK: - The window
@@ -108,15 +118,20 @@ final class SkinTests: XCTestCase {
                                   playlist: ["Happy Hour.med", "Magic Noises.med"],
                                   currentIndex: 0)
         let canvas = PlayerScreenRenderer.render(screen)
-        try writeIfAsked(canvas, "workbench.png")
+        try writeIfAsked(canvas, "classic.png")
 
         XCTAssertEqual(canvas.width, PlayerScreenRenderer.width)
         XCTAssertGreaterThan(canvas.height, 400)
 
-        // The title bar is the Workbench blue, and the window is not blank.
-        XCTAssertEqual(canvas.pixel(280, 10), Workbench.blue)
+        // The title bar is the panel face — it is a surface, not a coloured
+        // band — and the window is not blank.
+        XCTAssertEqual(canvas.pixel(280, 10), Theme.face)
         let distinct = Set(canvas.pixels)
         XCTAssertGreaterThan(distinct.count, 4, "the window rendered as a flat fill")
+
+        // The playing line is the one place the highlight belongs.
+        XCTAssertTrue(canvas.pixels.contains(Theme.highlight.rgba),
+                      "nothing in the window was highlighted")
     }
 
     func testTrackerPanelCanBeLeftOut() throws {
@@ -132,15 +147,78 @@ final class SkinTests: XCTestCase {
 
     func testAWindowWithNoModuleStillDraws() throws {
         let canvas = PlayerScreenRenderer.render(PlayerScreen())
-        try writeIfAsked(canvas, "workbench-empty.png")
+        try writeIfAsked(canvas, "classic-empty.png")
         XCTAssertEqual(canvas.width, PlayerScreenRenderer.width)
+    }
+
+    // MARK: - Palette
+
+    /// The colours are written down once, in the engine, and both interfaces
+    /// read them from there. They used to be written out four times, and the
+    /// copies drifted — the window frame stayed grey after the panels were
+    /// recoloured. If this ever fails, somebody has put a literal back.
+    func testBothPalettesDifferAndBothAreDark() {
+        for palette in Palette.allCases {
+            XCTAssertNotEqual(palette.face, palette.other.face,
+                              "\(palette.rawValue) and \(palette.other.rawValue) share a face colour")
+            // Dark means the shine is the lightest *frame* tone, not white:
+            // the bevel is inverted, and a shine at full brightness would be
+            // the old palette leaking back in.
+            XCTAssertLessThan(Int(palette.shine.red), 0xC0)
+            XCTAssertGreaterThan(Int(palette.shine.red), Int(palette.shadow.red),
+                                 "the lit edge is not lighter than the dark one")
+            XCTAssertGreaterThan(Int(palette.text.red), Int(palette.face.red),
+                                 "text would not read on the panel face")
+        }
+    }
+
+    func testSwitchingPaletteChangesWhatIsDrawn() {
+        // A store of its own: the palette is a real setting, and a suite that
+        // crashes halfway through should not leave the developer's app in the
+        // other colours.
+        let suite = "de.modrunner.tests.palette"
+        UserDefaults.standard.removePersistentDomain(forName: suite)
+        Palette.store = UserDefaults(suiteName: suite)!
+        defer {
+            Palette.store = .standard
+            UserDefaults.standard.removePersistentDomain(forName: suite)
+        }
+
+        Palette.current = .incudex
+        let incudex = PlayerScreenRenderer.render(PlayerScreen())
+        Palette.current = .lasse
+        let lasse = PlayerScreenRenderer.render(PlayerScreen())
+
+        XCTAssertEqual(incudex.width, lasse.width, "the palette changed the layout")
+        XCTAssertNotEqual(incudex.pixels, lasse.pixels, "the palette had no effect")
+    }
+
+    // MARK: - Gadgets
+
+    /// Each of the five is drawn, sits inside its box, and is distinguishable
+    /// from the others. A gadget that renders as a plain bevel is a gadget the
+    /// user cannot tell apart from its neighbour.
+    func testEveryGadgetDrawsSomethingOfItsOwn() {
+        var pictures: [[UInt32]] = []
+        for kind in Theme.Gadget.allCases {
+            var canvas = Canvas(width: 26, height: 22, fill: Theme.screen)
+            canvas.gadget(Rect(0, 0, 26, 22), kind)
+            XCTAssertTrue(canvas.pixels.contains(Theme.text.rgba), "\(kind) drew no ink")
+            // Nothing outside the gadget: the glyphs are placed on a 14x12
+            // grid inside the box, and an off-by-one used to push whole ones
+            // into the window edge.
+            XCTAssertEqual(canvas.pixel(25, 21), Theme.shadow, "\(kind) overran its box")
+            pictures.append(canvas.pixels)
+        }
+        XCTAssertEqual(Set(pictures.map { $0.hashValue }).count, pictures.count,
+                       "two gadgets drew the same picture")
     }
 
     // MARK: - PNG
 
     func testPNGHasTheRightSignatureAndChunks() {
-        var canvas = Canvas(width: 4, height: 4, fill: Workbench.salmon)
-        canvas.set(1, 1, Workbench.black)
+        var canvas = Canvas(width: 4, height: 4, fill: Theme.accent)
+        canvas.set(1, 1, Theme.shadow)
         let data = PNG.encode(canvas)
 
         XCTAssertEqual(Array(data.prefix(8)), [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])

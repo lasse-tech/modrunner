@@ -3,14 +3,15 @@ import AppKit
 import ModRunnerKit
 
 /// Settings are deliberately system-native rather than skinned: Cmd-, is a
-/// macOS habit, and a Workbench-styled dialog would be the one place the
+/// macOS habit, and a skinned dialog would be the one place the
 /// imitation gets in the way of the person using it.
 struct SettingsView: View {
 
     @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.system.rawValue
+    @AppStorage(Palette.storageKey) private var palette = Palette.incudex.rawValue
 
     static let width: CGFloat = 420
-    static let height: CGFloat = 172
+    static let height: CGFloat = 268
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -23,8 +24,26 @@ struct SettingsView: View {
                 }
             }
             .pickerStyle(.radioGroup)
+            .help(L10n.t("settings.languageNote"))
 
             Text(L10n.t("settings.languageNote"))
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Divider()
+
+            // The palette only shows in the classic skin, which the note below
+            // says rather than leaving the control to look broken when the
+            // native skin is on.
+            Picker(L10n.t("settings.palette"), selection: paletteChoice) {
+                ForEach(Palette.allCases, id: \.rawValue) { option in
+                    Text(option.title).tag(option.rawValue)
+                }
+            }
+            .pickerStyle(.radioGroup)
+
+            Text(L10n.t("settings.paletteNote"))
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -36,6 +55,16 @@ struct SettingsView: View {
         // Everything here is drawn in the language being chosen, so the whole
         // pane is rebuilt when the choice changes.
         .id(language)
+    }
+
+    /// Reads through `@AppStorage` so the radio group follows a change made in
+    /// the menu, but writes through `Palette.current` so the setter can refresh
+    /// the value the colours are actually read from. Writing straight to the
+    /// default would leave the window painted in the previous palette until
+    /// something else made it redraw.
+    private var paletteChoice: Binding<String> {
+        Binding(get: { palette },
+                set: { Palette.current = Palette(rawValue: $0) ?? .incudex })
     }
 }
 

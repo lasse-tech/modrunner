@@ -26,7 +26,7 @@ public struct Rect: Equatable {
 
 /// A colour as the framebuffer stores it: red, green, blue, alpha, one byte
 /// each, in that order, which is also the order PNG wants them in.
-public struct Colour: Equatable {
+public struct Colour: Equatable, Hashable, Sendable {
     public var rgba: UInt32
 
     public init(rgba: UInt32) { self.rgba = rgba }
@@ -41,7 +41,7 @@ public struct Colour: Equatable {
     public var alpha: UInt8 { UInt8(rgba & 0xFF) }
 }
 
-/// A software framebuffer, and every drawing operation the Workbench skin needs.
+/// A software framebuffer, and every drawing operation the classic skin needs.
 ///
 /// There is no toolkit under this and no window: the whole interface is painted
 /// into an array of pixels, which is what makes it the same picture on every

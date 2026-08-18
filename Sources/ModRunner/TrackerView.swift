@@ -23,7 +23,7 @@ struct TrackerLayout {
 
     /// Exact height of the panel, so the window can be sized without guessing.
     var height: CGFloat {
-        headerHeight + rowHeight * CGFloat(context * 2 + 1) + 2 * (Amiga.bevel + 1)
+        headerHeight + rowHeight * CGFloat(context * 2 + 1) + 2 * (Classic.bevel + 1)
     }
 }
 
@@ -65,8 +65,8 @@ struct TrackerView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .font(Amiga.font(min(layout.fontSize, 9 + layout.fontSize / 4)))
-        .foregroundColor(Amiga.darkGrey)
+        .font(Classic.font(min(layout.fontSize, 9 + layout.fontSize / 4)))
+        .foregroundColor(Classic.caption)
         .padding(.horizontal, 3)
         .frame(height: layout.headerHeight)
     }
@@ -84,14 +84,14 @@ struct TrackerView: View {
         return HStack(spacing: 0) {
             Text(valid ? String(format: "%03d", lineIndex) : "")
                 .frame(width: lineColumnWidth, alignment: .leading)
-                .foregroundColor(isCurrent ? Amiga.white : Amiga.darkGrey)
+                .foregroundColor(isCurrent ? Classic.highlightText : Classic.caption)
 
             ForEach(0..<trackCount, id: \.self) { track in
                 cell(block: block, line: lineIndex, track: track, valid: valid, isCurrent: isCurrent)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .font(Amiga.font(layout.fontSize))
+        .font(Classic.font(layout.fontSize))
         .padding(.horizontal, 3)
         .frame(height: layout.rowHeight)
         .background(background(isCurrent: isCurrent, onBeat: onBeat))
@@ -120,11 +120,11 @@ struct TrackerView: View {
     /// texture rather than as data. Only a value that is actually there gets a
     /// pen of its own, and only where the text is big enough for it to help.
     private func pen(_ column: Column, set: Bool, isCurrent: Bool) -> Color {
-        if isCurrent { return Amiga.white }
+        if isCurrent { return Classic.highlightText }
         // At panel size everything is one pen, exactly as OctaMED drew it.
-        guard layout.tintsColumns else { return Amiga.black }
-        guard set else { return Amiga.darkGrey }
-        return column == .instrument ? Amiga.blue : Amiga.black
+        guard layout.tintsColumns else { return Classic.textDim }
+        guard set else { return Classic.caption }
+        return column == .instrument ? Classic.arc : Classic.textDim
     }
 
     /// Roughly one character of the monospaced face, so the parts sit apart the
@@ -134,8 +134,11 @@ struct TrackerView: View {
     private var lineColumnWidth: CGFloat { (layout.fontSize * 2.4).rounded() }
 
     private func background(isCurrent: Bool, onBeat: Bool) -> Color {
-        if isCurrent { return Amiga.blue }
-        if onBeat { return Amiga.grey.opacity(0.55) }
+        if isCurrent { return Classic.highlight }
+        // Every fourth line is lifted a step off the ground rather than tinted:
+        // on a dark palette a wash reads as haze, a lighter surface reads as a
+        // rule.
+        if onBeat { return Classic.faceDark }
         return .clear
     }
 
@@ -171,9 +174,9 @@ private struct TrackerFrame: ViewModifier {
 
     func body(content: Content) -> some View {
         if bevelled {
-            content.amigaBevel(.recessed, fill: Amiga.lightGrey, inset: Amiga.bevel + 1)
+            content.classicBevel(.recessed, fill: Classic.sunken, inset: Classic.bevel + 1)
         } else {
-            content.background(Amiga.lightGrey)
+            content.background(Classic.sunken)
         }
     }
 }

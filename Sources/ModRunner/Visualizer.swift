@@ -48,19 +48,30 @@ struct VisualizerView: View {
     var onToggleMute: ((Int) -> Void)?
     var onSolo: ((Int) -> Void)?
 
-    /// Both visualisations occupy exactly this box. If they differed, switching
-    /// between them would shift everything below in the window.
+    /// Every visualisation occupies exactly this box — the same box, drawn on
+    /// the same ground. If they differed, switching between them would shift
+    /// everything around them in the window.
     static let height: CGFloat = 96
-    static let width: CGFloat = 250
+    static let width: CGFloat = 240
+
+    /// Inset of the meters from the edge of the box, so the bars sit on the
+    /// ground the other two draw on rather than against its rim.
+    private static let inset: CGFloat = 8
 
     var body: some View {
         Group {
             switch style {
             case .bars:
+                // No fixed bar width: the meters spread across the same box the
+                // trace and the rings fill, so all three read as one panel that
+                // changes its contents.
                 ChannelMeters(levels: levels, muted: muted,
                               onToggleMute: onToggleMute, onSolo: onSolo,
-                              height: Self.height)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                              barWidth: nil,
+                              height: Self.height - 2 * Self.inset)
+                    .padding(Self.inset)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(.black.opacity(0.22)))
             case .waveform:
                 WaveformView(samples: samples)
             case .ripple:
@@ -152,5 +163,8 @@ struct VisualizerPicker: View {
         .pickerStyle(.segmented)
         .labelsHidden()
         .frame(width: 88)
+        // A segmented control only shows the per-segment help while the pointer
+        // rests on that segment; this one covers the control as a whole.
+        .help(L10n.t("tooltip.visualizer"))
     }
 }

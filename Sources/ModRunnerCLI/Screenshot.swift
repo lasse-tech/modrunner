@@ -2,7 +2,7 @@ import Foundation
 import ModRunnerKit
 import ModRunnerSkin
 
-/// Draws the Workbench interface into a PNG without opening a window.
+/// Draws the classic interface into a PNG without opening a window.
 ///
 /// This is how the portable skin is looked at on a machine that has no way to
 /// show it yet, and how a build server checks that it still draws: the renderer

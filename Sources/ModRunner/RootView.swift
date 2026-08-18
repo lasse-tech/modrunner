@@ -13,21 +13,28 @@ struct RootView: View {
     /// Read only so the tree is rebuilt when the language changes: the strings
     /// are fetched imperatively through `L10n`, which SwiftUI cannot observe.
     @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.system.rawValue
+    /// Same reason: a change of palette has to repaint the classic skin, and
+    /// the colours are read imperatively through `Classic`.
+    @AppStorage(Palette.storageKey) private var paletteName = Palette.incudex.rawValue
 
     private var skin: Skin { Skin(rawValue: skinName) ?? .native }
 
     var body: some View {
         // Pinned to the top-left rather than centred: if the window size and the
         // content size ever disagree, the mismatch shows up as slack at the
-        // edges instead of hiding the Workbench title bar off the top.
+        // edges instead of hiding the drawn title bar off the top.
         ZStack(alignment: .topLeading) {
-            Color(nsColor: skin == .amiga
-                  ? NSColor(calibratedRed: 0x95 / 255, green: 0x95 / 255, blue: 0x95 / 255, alpha: 1)
+            // The ground behind the content, for the moment between a resize
+            // and the relayout. It comes from `Palette` like everything else —
+            // this used to be a literal, and it stayed grey when the rest of
+            // the skin was recoloured.
+            Color(nsColor: skin == .classic
+                  ? Classic.nsColor(\.face)
                   : .windowBackgroundColor)
 
             switch skin {
-            case .amiga:
-                AmigaSkinView(model: model)
+            case .classic:
+                ClassicSkinView(model: model)
             case .native:
                 NativeSkinView(model: model)
             }
@@ -39,6 +46,10 @@ struct RootView: View {
         // window. The app delegate's notification observer is only a backstop.
         .onChange(of: skinName) { _ in applyWindowState(skinChanged: true) }
         .onChange(of: showTracker) { _ in applyWindowState() }
+        // The window's own background colour is set on the NSWindow, not in
+        // SwiftUI, so a palette change has to go back through the chrome or the
+        // frame keeps the previous palette's ground.
+        .onChange(of: paletteName) { _ in applyWindowState() }
         .onAppear { applyWindowState() }
     }
 
@@ -53,16 +64,27 @@ struct RootView: View {
         }
     }
 
-    /// The size the window should open at, before any view has been laid out.
+    /// The size the layout asks for, before any view has been laid out and
+    /// before whatever height the user has dragged the window to.
     static func initialSize() -> CGSize {
-        let tracker = AmigaSkinView.trackerVisiblePreference
+        let tracker = SkinMetrics.trackerVisiblePreference
         switch Skin.current {
-        case .amiga:
-            return CGSize(width: AmigaSkinView.windowWidth,
-                          height: AmigaSkinView.windowHeight(showingTracker: tracker))
+        case .classic:
+            return CGSize(width: SkinMetrics.windowWidth,
+                          height: SkinMetrics.windowHeight(showingTracker: tracker))
         case .native:
             return CGSize(width: NativeSkinView.windowWidth,
                           height: NativeSkinView.windowHeight(showingTracker: tracker))
+        }
+    }
+
+    /// The shortest the window may be made. Everything above the module list is
+    /// laid out at a fixed height, so this is where dragging stops.
+    static func minimumHeight() -> CGFloat {
+        let tracker = SkinMetrics.trackerVisiblePreference
+        switch Skin.current {
+        case .classic: return SkinMetrics.minimumHeight(showingTracker: tracker)
+        case .native: return NativeSkinView.minimumHeight(showingTracker: tracker)
         }
     }
 }

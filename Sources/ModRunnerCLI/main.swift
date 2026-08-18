@@ -9,8 +9,8 @@ usage:
   modrunner render <module> -o <file>          render to a 16-bit stereo WAV
   modrunner dump   <module> [--block N]        pattern data as text
   modrunner play   <module>...                 play through the audio device
-  modrunner screenshot <module> -o <file.png>  draw the Workbench interface
-  modrunner window <module>...                 the Workbench player in a window
+  modrunner screenshot <module> -o <file.png>  draw the classic interface
+  modrunner window <module>...                 the classic player in a window
 
 options:
   -o, --output <file>   where render writes; - writes the WAV to stdout

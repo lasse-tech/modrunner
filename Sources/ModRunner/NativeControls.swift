@@ -13,7 +13,11 @@ struct ChannelMeters: View {
     var muted: Set<Int> = []
     var onToggleMute: ((Int) -> Void)?
     var onSolo: ((Int) -> Void)?
-    var barWidth: CGFloat = 14
+    /// Width of one bar, or nil to share out whatever width is offered. The
+    /// player window uses the second form, so the meters fill the same box as
+    /// the other visualisations; the stage strip keeps a fixed width, where the
+    /// meters sit in a row with everything else.
+    var barWidth: CGFloat? = 14
     /// Total height including the channel numbers, so the meters occupy the
     /// same box as the other visualisations.
     var height: CGFloat = 96
@@ -36,6 +40,7 @@ struct ChannelMeters: View {
                                   onToggle: { onToggleMute?(index) },
                                   onSolo: { onSolo?(index) })
                 }
+                .frame(maxWidth: barWidth == nil ? .infinity : nil)
             }
         }
         .onChange(of: levels) { new in updatePeaks(new) }
@@ -90,6 +95,7 @@ struct ChannelMeters: View {
         }
         .frame(width: barWidth,
                height: max(10, height - Self.labelHeight - Self.labelSpacing))
+        .frame(maxWidth: barWidth == nil ? .infinity : nil)
     }
 }
 
@@ -98,7 +104,9 @@ struct ChannelMeters: View {
 private struct ChannelButton: View {
     let number: Int
     let muted: Bool
-    let width: CGFloat
+    /// nil means "as wide as the bar above", which is itself sharing out the
+    /// width it was offered.
+    let width: CGFloat?
     let height: CGFloat
     let onToggle: () -> Void
     let onSolo: () -> Void
@@ -110,6 +118,7 @@ private struct ChannelButton: View {
             .font(.system(size: 9, weight: .semibold, design: .rounded))
             .foregroundStyle(muted ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
             .frame(width: width, height: height)
+            .frame(maxWidth: width == nil ? .infinity : nil)
             .background {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(muted ? AnyShapeStyle(Brand.orange) : AnyShapeStyle(.quaternary))
@@ -255,6 +264,8 @@ struct TransportButton: View {
     let symbol: String
     var prominent = false
     var size: CGFloat = 30
+    /// What the button does, in words. Every button in the app carries one.
+    var help: String = ""
     let action: () -> Void
 
     @State private var hovering = false
@@ -276,6 +287,7 @@ struct TransportButton: View {
         .scaleEffect(hovering ? 1.06 : 1)
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: hovering)
         .onHover { hovering = $0 }
+        .help(help)
     }
 }
 

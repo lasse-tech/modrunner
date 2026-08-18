@@ -7,10 +7,17 @@ jeder Balken in genau so viele Segmente geteilt.
 Farben
 ------
 Orange   #FF6B35   Primär
-Lachs    #FFA997   Sekundär (aus der Workbench-Palette, Pen 7)
-Blau     #3B67A2   Akzent (Workbench Pen 3)
+Lachs    #FFA997   Sekundär
+Blau     #3B67A2   Akzent
 Dunkel   #17130F   Hintergrund dunkel
 Hell     #EDE6E0   Hintergrund hell
+
+Lachs ist das Primärorange, aufgehellt und entsättigt: dieselbe Farbe, aber
+so weit zurückgenommen, dass sie auf dunklem Grund und in kleinen Flächen
+lesbar bleibt, wo das reine Orange zu laut wird. Blau liegt dem Orange auf
+dem Farbkreis annähernd gegenüber und ist der kühle Gegenpol dazu; es trägt
+alles, was ruhig bleiben soll. Die fünf Werte sind gesetzt und werden nicht
+nachgerechnet — die Bildmarke ist an ihnen ausgerichtet.
 
 Wortmarke: Space Grotesk Bold, Laufweite -0.035em, "Runner" in Orange.
 Die Wortmarke steht in einer Zeile mit der Bildmarke, Unterkante bündig

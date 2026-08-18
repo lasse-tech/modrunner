@@ -124,6 +124,13 @@ Noises* collection. They are included by the author. See `Examples/README.md`.
 
 Amiga, AmigaOS and Workbench are trademarks of their respective owners. MED and
 OctaMED are the work of Teijo Kinnunen and RBF Software. References to them here
-are descriptive, to say what this software reads and what visual idiom it
-follows. No affiliation or endorsement is claimed or implied. No Amiga artwork,
-icons, fonts or ROM code are included in this repository.
+are descriptive, and they are descriptive of two things only: the file formats
+this software reads, which were written for that machine and are documented in
+its terms, and the switchable output filter, which models the analogue stages an
+A500 carried between Paula and its sockets. No affiliation or endorsement is
+claimed or implied.
+
+The interface is not among those references. Its Classic skin is an original
+design in a general idiom — bevelled surfaces, two-pixel edges, a monospaced
+grid — with its own palette, its own window gadgets and its own 8×8 bitmap face.
+No Amiga artwork, icons, fonts or ROM code are included in this repository.

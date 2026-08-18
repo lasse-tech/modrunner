@@ -24,3 +24,10 @@ Amiga, AmigaOS and Workbench are trademarks of their respective owners. MED and
 OctaMED are the work of Teijo Kinnunen and RBF Software. This project is an
 independent reimplementation and is not affiliated with, endorsed by, or derived
 from any of them.
+
+Amiga is named in this project descriptively, for the file formats it reads and
+for the switchable output filter that models the analogue stages of an A500. The
+interface is an original design of its own, in a general idiom of bevelled
+surfaces, two-pixel edges and a monospaced grid, with its own palette, window
+gadgets and bitmap face. No Amiga artwork, icons, fonts or ROM code are
+included.

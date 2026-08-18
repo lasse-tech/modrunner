@@ -43,18 +43,18 @@ final class WindowTests: XCTestCase {
         let window = try X11Window(title: "ModRunner test", width: 64, height: 32)
         defer { window.close() }
 
-        var canvas = Canvas(width: 64, height: 32, fill: Workbench.grey)
-        canvas.fill(Rect(0, 0, 32, 32), Workbench.blue)
-        canvas.set(40, 8, Workbench.salmon)
+        var canvas = Canvas(width: 64, height: 32, fill: Theme.face)
+        canvas.fill(Rect(0, 0, 32, 32), Theme.highlight)
+        canvas.set(40, 8, Theme.accent)
         try window.present(canvas)
 
         guard let readBack = window.readBack() else {
             return XCTFail("the server returned no image")
         }
         XCTAssertEqual(readBack.width, 64)
-        XCTAssertEqual(readBack.pixel(10, 10), Workbench.blue, "the left half should be blue")
-        XCTAssertEqual(readBack.pixel(50, 10), Workbench.grey, "the right half should be grey")
-        XCTAssertEqual(readBack.pixel(40, 8), Workbench.salmon, "a single pixel went astray")
+        XCTAssertEqual(readBack.pixel(10, 10), Theme.highlight, "the left half is not the highlight colour")
+        XCTAssertEqual(readBack.pixel(50, 10), Theme.face, "the right half is not the panel face")
+        XCTAssertEqual(readBack.pixel(40, 8), Theme.accent, "a single pixel went astray")
         #else
         throw XCTSkip("not Linux")
         #endif
@@ -84,8 +84,8 @@ final class WindowTests: XCTestCase {
         do {
             let window = try Window.open(title: "ModRunner test", width: 64, height: 32)
             defer { window.close() }
-            var canvas = Canvas(width: 64, height: 32, fill: Workbench.blue)
-            canvas.set(1, 1, Workbench.white)
+            var canvas = Canvas(width: 64, height: 32, fill: Theme.highlight)
+            canvas.set(1, 1, Theme.shine)
             try window.present(canvas)
             _ = window.poll()
         } catch let error as WindowError {
@@ -121,7 +121,7 @@ final class WindowTests: XCTestCase {
         guard let play = controls.first(where: {
             if case .playPause = $0.role { return true } else { return false }
         }) else { return XCTFail("no play button was reported") }
-        XCTAssertEqual(canvas.pixel(play.rect.x + 1, play.rect.y + 1), Workbench.white,
+        XCTAssertEqual(canvas.pixel(play.rect.x + 1, play.rect.y + 1), Theme.shine,
                        "the play button's raised edge is not where it was said to be")
     }
 }

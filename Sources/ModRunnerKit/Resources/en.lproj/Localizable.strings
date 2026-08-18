@@ -21,6 +21,7 @@
 "menu.miniPlayer"     = "Mini Player";
 
 /* Skins and visualisations */
+"skin.classic"        = "Classic";
 "skin.native"         = "Native";
 "visualizer.levels"   = "Levels";
 "visualizer.waveform" = "Waveform";
@@ -42,6 +43,7 @@
 /* Statistics */
 "stat.position" = "Position";
 "stat.block"    = "Block";
+"stat.line"     = "Line";
 "stat.tempo"    = "Tempo";
 
 /* Status line */
@@ -67,9 +69,21 @@
 "tooltip.filterOff"   = "Amiga output filter off — click to engage";
 "tooltip.channelMuted"   = "Channel %d muted — click to unmute, double-click to solo";
 "tooltip.channelUnmuted" = "Click to mute channel %d, double-click to solo";
+"tooltip.playPrevious"   = "Previous module";
+"tooltip.previousBlock"  = "One position back";
+"tooltip.play"           = "Play";
+"tooltip.pause"          = "Pause";
+"tooltip.stop"           = "Stop";
+"tooltip.nextBlock"      = "One position on";
+"tooltip.playNext"       = "Next module";
+"tooltip.open"           = "Open modules or a folder…";
+"tooltip.tracks"         = "Show or hide the tracker";
+"tooltip.visualizer"     = "Choose the visualisation";
+"tooltip.licences"       = "Show the licences of the work this builds on";
+"tooltip.aboutClose"     = "Close this panel";
 
 /* Full-screen stage */
-"stage.keys" = "ESC  leave    SPACE  play/pause    ←/→  position";
+"stage.keys" = "ESC  leave    SPACE  play/pause    ←/→  position    ⇧←/→  module";
 
 /* Settings */
 "settings.title"           = "Settings";
@@ -78,6 +92,8 @@
 "settings.language.en"     = "English";
 "settings.language.de"     = "German";
 "settings.languageNote"    = "ModRunner follows the system language unless you pick one here.";
+"settings.palette"         = "Palette";
+"settings.paletteNote"     = "Applies to the classic interface. The native one follows the system appearance.";
 
 /* Errors */
 "error.tooShort"          = "File is too short to be a MED module.";
@@ -110,7 +126,8 @@
 "button.filter"      = "LED";
 "button.fullScreen"  = "Full";
 "button.miniPlayer"  = "Mini";
-"tooltip.switchSkin" = "Switch to %@";
+"tooltip.switchSkin"    = "Switch to %@";
+"tooltip.switchPalette" = "Use the %@ palette";
 "tooltip.expand"     = "Back to the full player";
 "menu.recent"        = "Recently Played";
 "menu.recent.clear"  = "Clear Menu";

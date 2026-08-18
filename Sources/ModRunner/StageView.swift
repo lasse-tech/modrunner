@@ -27,8 +27,8 @@ struct StageView: View {
     var body: some View {
         Group {
             switch skin {
-            case .amiga:
-                AmigaStageView(model: model, chromeVisible: chromeVisible)
+            case .classic:
+                ClassicStageView(model: model, chromeVisible: chromeVisible)
             case .native:
                 NativeStageView(model: model, chromeVisible: chromeVisible)
             }
@@ -65,7 +65,7 @@ struct StageView: View {
         // number column adds about five more.
         let columns = 5.0 + Double(tracks) * 13.5
         let advance = 0.62     // width of one character, relative to its size
-        let usable = Double(size.width) - 2 * margin - 4 * Double(Amiga.bevel)
+        let usable = Double(size.width) - 2 * margin - 4 * Double(Classic.bevel)
         let byWidth = usable / (columns * advance)
 
         // Height left for the pattern once both strips have taken their share.
@@ -172,11 +172,11 @@ enum StageText {
     }
 }
 
-// MARK: - Workbench
+// MARK: - Classic
 
-/// The stage in the Workbench idiom: the pattern in a recessed bevel on a
-/// Workbench screen, with drawn gadgets above and below.
-struct AmigaStageView: View {
+/// The stage in the classic idiom: the pattern in a recessed bevel on the
+/// desktop ground, with drawn gadgets above and below.
+struct ClassicStageView: View {
 
     @ObservedObject var model: PlayerModel
     var chromeVisible: Bool
@@ -193,7 +193,7 @@ struct AmigaStageView: View {
                             block: model.snapshot.block,
                             line: model.snapshot.line,
                             layout: layout)
-                    .amigaBevel(.recessed, fill: Amiga.lightGrey, inset: Amiga.bevel + 2)
+                    .classicBevel(.recessed, fill: Classic.sunken, inset: Classic.bevel + 2)
                     .frame(maxHeight: .infinity)
 
                 footer
@@ -201,20 +201,20 @@ struct AmigaStageView: View {
             }
             .padding(StageView.margin)
         }
-        .background(Amiga.screen)
+        .background(Classic.screen)
     }
 
     private var header: some View {
         HStack(alignment: .bottom, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(StageText.title(model))
-                    .font(Amiga.boldFont(22))
-                    .foregroundColor(Amiga.white)
+                    .font(Classic.boldFont(22))
+                    .foregroundColor(Classic.text)
                     .lineLimit(1)
                 if let annotation = StageText.annotation(model) {
                     Text(annotation)
-                        .font(Amiga.font(12))
-                        .foregroundColor(Amiga.lightGrey)
+                        .font(Classic.font(12))
+                        .foregroundColor(Classic.textDim)
                         .lineLimit(1)
                 }
             }
@@ -222,29 +222,34 @@ struct AmigaStageView: View {
             Spacer(minLength: 12)
 
             HStack(spacing: 6) {
-                AmigaField(caption: "POS", value: StageText.position(model))
-                AmigaField(caption: "BLOCK", value: StageText.block(model))
-                AmigaField(caption: "LINE", value: StageText.line(model))
-                AmigaField(caption: "BPM", value: String(format: "%.0f", model.snapshot.beatsPerMinute))
-                AmigaField(caption: "TIME", value: StageText.time(model))
+                ClassicField(caption: "POS", value: StageText.position(model))
+                ClassicField(caption: "BLOCK", value: StageText.block(model))
+                ClassicField(caption: "LINE", value: StageText.line(model))
+                ClassicField(caption: "BPM", value: String(format: "%.0f", model.snapshot.beatsPerMinute))
+                ClassicField(caption: "TIME", value: StageText.time(model))
             }
             .frame(width: 420)
-            .amigaBevel(.raised)
+            .classicBevel(.raised)
         }
     }
 
     private var footer: some View {
         HStack(spacing: 10) {
-            AmigaButton(label: model.snapshot.isPlaying ? "||" : ">", width: 44) { model.togglePlay() }
-            AmigaButton(label: "<<", width: 38) { model.previousPosition() }
-            AmigaButton(label: ">>", width: 38) { model.nextPosition() }
+            ClassicButton(label: model.snapshot.isPlaying ? "||" : ">", width: 44,
+                        help: L10n.t(model.snapshot.isPlaying ? "tooltip.pause" : "tooltip.play")) {
+                model.togglePlay()
+            }
+            ClassicButton(label: "<<", width: 38,
+                        help: L10n.t("tooltip.previousBlock")) { model.previousPosition() }
+            ClassicButton(label: ">>", width: 38,
+                        help: L10n.t("tooltip.nextBlock")) { model.nextPosition() }
 
             // The meters carry a GeometryReader, so they take every point they
             // are offered. Without a ceiling they push the key hints off the
             // end of the strip.
             HStack(spacing: 8) {
                 ForEach(0..<StageText.meterCount(model), id: \.self) { channel in
-                    AmigaVUMeter(label: "\(channel + 1)",
+                    ClassicVUMeter(label: "\(channel + 1)",
                                  level: StageText.level(model, channel: channel))
                         .frame(width: 92)
                 }
@@ -254,12 +259,12 @@ struct AmigaStageView: View {
             Spacer(minLength: 8)
 
             Text(L10n.t("stage.keys"))
-                .font(Amiga.font(11))
-                .foregroundColor(Amiga.darkGrey)
+                .font(Classic.font(11))
+                .foregroundColor(Classic.caption)
                 .fixedSize()
                 .padding(.trailing, 4)
         }
-        .amigaBevel(.raised, inset: Amiga.bevel + 4)
+        .classicBevel(.raised, inset: Classic.bevel + 4)
     }
 }
 
@@ -354,10 +359,15 @@ struct NativeStageView: View {
             Scrubber(value: model.snapshot.progress) { model.seek(fraction: $0) }
 
             HStack(spacing: 12) {
-                TransportButton(symbol: "backward.fill") { model.previousPosition() }
+                TransportButton(symbol: "backward.fill",
+                                help: L10n.t("tooltip.previousBlock")) { model.previousPosition() }
                 TransportButton(symbol: model.snapshot.isPlaying ? "pause.fill" : "play.fill",
-                                prominent: true) { model.togglePlay() }
-                TransportButton(symbol: "forward.fill") { model.nextPosition() }
+                                prominent: true,
+                                help: L10n.t(model.snapshot.isPlaying ? "tooltip.pause" : "tooltip.play")) {
+                    model.togglePlay()
+                }
+                TransportButton(symbol: "forward.fill",
+                                help: L10n.t("tooltip.nextBlock")) { model.nextPosition() }
 
                 ChannelMeters(levels: model.snapshot.channelMeters,
                               muted: model.mutedChannels,

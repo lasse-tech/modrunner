@@ -22,7 +22,7 @@ struct MiniPlayerView: View {
     var body: some View {
         Group {
             switch skin {
-            case .amiga:  AmigaMiniPlayerView(model: model, onExpand: onExpand)
+            case .classic:  ClassicMiniPlayerView(model: model, onExpand: onExpand)
             case .native: NativeMiniPlayerView(model: model, onExpand: onExpand)
             }
         }
@@ -37,9 +37,9 @@ private func mixLevel(_ model: PlayerModel) -> Float {
     model.snapshot.channelMeters.max() ?? 0
 }
 
-// MARK: - Workbench
+// MARK: - Classic
 
-struct AmigaMiniPlayerView: View {
+struct ClassicMiniPlayerView: View {
 
     @ObservedObject var model: PlayerModel
     var onExpand: () -> Void = {}
@@ -48,7 +48,7 @@ struct AmigaMiniPlayerView: View {
         VStack(spacing: 0) {
             // Close and zoom both lead back to the full player: the strip is a
             // mode, not a second document window.
-            AmigaTitleBar(
+            ClassicTitleBar(
                 title: "ModRunner",
                 onClose: { MiniPlayerController.shared.dismiss() },
                 onMinimise: { NSApplication.shared.keyWindow?.miniaturize(nil) },
@@ -57,33 +57,38 @@ struct AmigaMiniPlayerView: View {
             )
 
             VStack(spacing: 5) {
-                AmigaReadout(text: StageText.title(model))
+                ClassicReadout(text: StageText.title(model))
                     .frame(height: 18)
 
                 HStack(spacing: 5) {
                     // Narrower than the main window's, but not so narrow that
                     // the labels have to be truncated.
-                    AmigaButton(label: "|<", width: 34) { model.playPrevious() }
-                    AmigaButton(label: model.snapshot.isPlaying ? "||" : ">", width: 38) { model.togglePlay() }
-                    AmigaButton(label: ">|", width: 34) { model.playNext() }
+                    ClassicButton(label: "|<", width: 34,
+                                help: L10n.t("tooltip.playPrevious")) { model.playPrevious() }
+                    ClassicButton(label: model.snapshot.isPlaying ? "||" : ">", width: 38,
+                                help: L10n.t(model.snapshot.isPlaying ? "tooltip.pause" : "tooltip.play")) {
+                        model.togglePlay()
+                    }
+                    ClassicButton(label: ">|", width: 34,
+                                help: L10n.t("tooltip.playNext")) { model.playNext() }
 
                     // One bar for the whole mix: at this size a meter per
                     // channel would be four smears of grey.
-                    AmigaVUMeter(label: "MIX", level: mixLevel(model))
+                    ClassicVUMeter(label: "MIX", level: mixLevel(model))
 
                     Text(StageText.time(model))
-                        .font(Amiga.font(10))
-                        .foregroundColor(Amiga.black)
+                        .font(Classic.font(10))
+                        .foregroundColor(Classic.text)
                         .frame(width: 34, alignment: .trailing)
                 }
 
-                AmigaSlider(value: model.snapshot.progress, knobWidth: 18) { fraction in
+                ClassicSlider(value: model.snapshot.progress, knobWidth: 18) { fraction in
                     model.seek(fraction: fraction)
                 }
             }
             .padding(6)
         }
-        .background(Amiga.grey)
+        .background(Classic.face)
     }
 }
 
@@ -98,42 +103,59 @@ struct NativeMiniPlayerView: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Text(StageText.title(model))
-                    .font(.system(size: 12, weight: .medium))
-                    .lineLimit(1)
+            ZStack {
+                // The strip has no title bar of its own, so its top row is what
+                // it is dragged by. Underneath the row rather than behind it as
+                // a background: the two buttons in the row still take their own
+                // clicks, and everything else in it passes the click down here.
+                WindowDragArea()
 
-                Spacer(minLength: 4)
+                HStack(spacing: 8) {
+                    // Neither of these is a control, and letting them take the
+                    // click would put a dead spot in the drag area.
+                    Text(StageText.title(model))
+                        .font(.system(size: 12, weight: .medium))
+                        .lineLimit(1)
+                        .allowsHitTesting(false)
 
-                Text(StageText.time(model))
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
+                    Spacer(minLength: 4)
 
-                // The window has no title bar of its own, so the way back to
-                // the full player lives here.
-                Button(action: onExpand) {
-                    Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 10, weight: .semibold))
+                    Text(StageText.time(model))
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .monospacedDigit()
                         .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .help(L10n.t("tooltip.expand"))
+                        .allowsHitTesting(false)
 
-                Button { MiniPlayerController.shared.dismiss() } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.secondary)
+                    // The window has no title bar of its own, so the way back to
+                    // the full player lives here.
+                    Button(action: onExpand) {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(L10n.t("tooltip.expand"))
+
+                    Button { MiniPlayerController.shared.dismiss() } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(L10n.t("tooltip.close"))
                 }
-                .buttonStyle(.plain)
-                .help(L10n.t("tooltip.close"))
             }
 
             HStack(spacing: 8) {
-                TransportButton(symbol: "backward.end.fill", size: 22) { model.playPrevious() }
+                TransportButton(symbol: "backward.end.fill", size: 22,
+                                help: L10n.t("tooltip.playPrevious")) { model.playPrevious() }
                 TransportButton(symbol: model.snapshot.isPlaying ? "pause.fill" : "play.fill",
-                                prominent: true, size: 22) { model.togglePlay() }
-                TransportButton(symbol: "forward.end.fill", size: 22) { model.playNext() }
+                                prominent: true, size: 22,
+                                help: L10n.t(model.snapshot.isPlaying ? "tooltip.pause" : "tooltip.play")) {
+                    model.togglePlay()
+                }
+                TransportButton(symbol: "forward.end.fill", size: 22,
+                                help: L10n.t("tooltip.playNext")) { model.playNext() }
 
                 MixBar(level: mixLevel(model))
                     .frame(height: 6)
