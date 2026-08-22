@@ -96,6 +96,36 @@ final class WindowTests: XCTestCase {
         #endif
     }
 
+    /// Every gadget in the VIEW row has to be reported as a control.
+    ///
+    /// LED and Load were drawn by the renderer and absent from the hit testing,
+    /// because each carried its own copy of the layout and only one of them was
+    /// ever updated. They looked like buttons and did nothing. Both now come
+    /// from `viewGadgets`, and this is what keeps them from parting again.
+    func testEveryViewGadgetIsClickable() {
+        var screen = PlayerScreen()
+        screen.playlist = ["one"]
+
+        let canvas = PlayerScreenRenderer.render(screen)
+        var reported: Set<String> = []
+        for control in PlayerScreenRenderer.controls(for: screen) {
+            let name: String
+            switch control.role {
+            case .tracker:   name = "Tracks"
+            case .filter:    name = "LED"
+            case .openFiles: name = "Load"
+            default: continue
+            }
+            reported.insert(name)
+            // And reported where it was drawn: the raised edge of a button,
+            // not the panel behind it.
+            XCTAssertEqual(canvas.pixel(control.rect.x + 1, control.rect.y + 1), Theme.shine,
+                           "\(name) is reported somewhere other than where it is drawn")
+        }
+        XCTAssertEqual(reported, ["Tracks", "LED", "Load"],
+                       "a gadget in the VIEW row is drawn but cannot be clicked")
+    }
+
     /// The renderer reports where it drew the controls, and the window layer
     /// hit-tests against that. If the two disagree the buttons stop working,
     /// so the report itself is worth checking: the play button has to be under

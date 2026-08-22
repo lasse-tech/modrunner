@@ -17,7 +17,7 @@ enum WindowPlayer {
     /// control, and for a fixed layout with nine of them it does not need one.
     private enum Action {
         case previousModule, previousPosition, playPause, stop, nextPosition, nextModule
-        case toggleTracker
+        case toggleTracker, toggleFilter
         case seek(Double)
         // The title bar. Zoom is not here: on the Amiga it switched between the
         // window's two sizes, and the two sizes this window has are with the
@@ -81,9 +81,6 @@ enum WindowPlayer {
         var menu: PlayerScreen.MenuSelection?
         var showAbout = false
 
-        /// Adds what the chooser handed back, skipping anything already listed.
-        /// Nothing starts playing: the macOS app appends too, and having Open
-        /// interrupt the music would be a surprise rather than a convenience.
         /// Where a chooser should open: beside the module being played, or
         /// nowhere in particular when there is none.
         func currentDrawer() -> URL? {
@@ -103,6 +100,9 @@ enum WindowPlayer {
             replayer.play()
         }
 
+        /// Adds what the chooser handed back, skipping anything already listed.
+        /// Nothing starts playing: the macOS app appends too, and having Open
+        /// interrupt the music would be a surprise rather than a convenience.
         func add(_ urls: [URL]) {
             for url in ModuleLoader.modules(in: urls)
             where !playlist.contains(where: { $0.url == url }) {
@@ -124,6 +124,10 @@ enum WindowPlayer {
                 let step = { if case .nextModule = action { return 1 } else { return -1 } }()
                 show((index + step + playlist.count) % playlist.count)
             case .toggleTracker: showTracker.toggle()
+            // The Amiga low-pass, switched by the power LED on the machine
+            // itself. The replayer applies it as it mixes, so it takes
+            // effect on the next buffer rather than needing a reload.
+            case .toggleFilter: replayer.filterEnabled.toggle()
             case .closeWindow: running = false
             case .minimise: window.minimise()
             case .sendToBack: window.sendToBack()
@@ -158,6 +162,7 @@ enum WindowPlayer {
                                   playlist: playlist.map(\.title),
                                   currentIndex: playlist.isEmpty ? nil : index,
                                   showTracker: showTracker)
+            screen.filterEnabled = replayer.filterEnabled
             screen.menu = menu
             screen.showAbout = showAbout
             let canvas = PlayerScreenRenderer.render(screen)
@@ -274,6 +279,8 @@ enum WindowPlayer {
             case .nextPosition: return .nextPosition
             case .nextModule: return .nextModule
             case .tracker, .zoom: return .toggleTracker
+            case .filter: return .toggleFilter
+            case .openFiles: return .openFiles
             case .dismissAbout: return .dismissAbout
             case .close: return .closeWindow
             case .minimise: return .minimise

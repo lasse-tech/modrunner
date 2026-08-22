@@ -34,6 +34,8 @@ public struct PlayerScreen {
     public var trackerRows: [TrackerRow] = []
     public var trackCount = 4
     public var showTracker = true
+    /// Whether the Amiga output filter is on, so the LED gadget can show it.
+    public var filterEnabled = false
 
     public var meters: [Float] = [0, 0, 0, 0]
     public var progress = 0.0
@@ -114,6 +116,11 @@ public enum PlayerScreenRenderer {
     public enum ControlRole {
         case previousModule, previousPosition, playPause, stop, nextPosition, nextModule
         case tracker, songPosition
+        /// The Amiga output filter, which on the machine itself was switched by
+        /// the power LED -- which is what the gadget is still called.
+        case filter
+        /// The Load gadget, the same thing as Project > Open Files.
+        case openFiles
         /// The title bar. Its gadgets are the whole of the window chrome on the
         /// platforms that hide the system one, so they have to be reachable
         /// here rather than being pixels that happen to look like buttons.
@@ -162,10 +169,9 @@ public enum PlayerScreenRenderer {
                                            position.width, position.height - Font.cellHeight - 2),
                                 role: .songPosition))
 
-        let options = stack.viewOptions.inset(by: Theme.bevel + 2)
-        controls.append(Control(rect: Rect(options.x + 5 * Font.cellWidth, options.y,
-                                           66, options.height),
-                                role: .tracker))
+        for gadget in viewGadgets(for: screen, in: stack.viewOptions) {
+            controls.append(Control(rect: gadget.rect, role: gadget.role))
+        }
         return controls
     }
 
@@ -366,17 +372,46 @@ public enum PlayerScreenRenderer {
         return rect.maxY
     }
 
+    /// The gadgets in the VIEW row, laid out once.
+    ///
+    /// The same bargain `Panels` makes: the renderer draws from this and the
+    /// hit testing registers from it, so a gadget cannot be painted on without
+    /// also being clickable. Both used to carry their own copy of the widths,
+    /// and LED and Load were only ever in the drawing one -- which is why they
+    /// looked like buttons and did nothing.
+    static func viewGadgets(for screen: PlayerScreen,
+                            in rect: Rect) -> [(role: ControlRole, rect: Rect, label: String, on: Bool)] {
+        let inner = rect.inset(by: Theme.bevel + 2)
+        let entries: [(role: ControlRole, label: String, width: Int, on: Bool)] = [
+            (.tracker, "Tracks", 66, screen.showTracker),
+            (.filter, "LED", 44, screen.filterEnabled),
+            (.openFiles, "Load", 52, false)
+        ]
+
+        var gadgets: [(role: ControlRole, rect: Rect, label: String, on: Bool)] = []
+        var x = inner.x + 5 * Font.cellWidth
+        for entry in entries {
+            gadgets.append((entry.role, Rect(x, inner.y, entry.width, inner.height),
+                            entry.label, entry.on))
+            x += entry.width + 6
+        }
+        return gadgets
+    }
+
     private static func viewOptions(_ canvas: inout Canvas, _ screen: PlayerScreen, _ rect: Rect) -> Int {
         canvas.bevel(rect, .raised)
         let inner = rect.inset(by: Theme.bevel + 2)
 
         canvas.text("VIEW", at: inner.x, inner.y + (inner.height - Font.cellHeight) / 2, Theme.text)
-        var x = inner.x + 5 * Font.cellWidth
-        for (label, width) in [("Tracks", 66), ("LED", 44), ("Load", 52)] {
-            canvas.button(Rect(x, inner.y, width, inner.height), label)
-            x += width + 6
+        for gadget in viewGadgets(for: screen, in: rect) {
+            canvas.button(gadget.rect, gadget.label, on: gadget.on)
         }
-        // Right-aligned, laid out from the edge inwards.
+
+        // Mini and Full are the two the portable interface cannot do yet: one
+        // needs a full-screen mode in the window backends, the other a second
+        // layout that does not exist outside the macOS app. They are drawn
+        // because the row is the same row on both, and deliberately left out of
+        // `viewGadgets` so nothing here claims they are wired up.
         var right = inner.maxX
         for (label, width) in [("Mini", 52), ("Full", 52)] {
             right -= width
