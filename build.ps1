@@ -237,7 +237,10 @@ function Invoke-InstallTask {
         Copy-Item -Path (Join-Path $IconDir '*.ico') -Destination $Prefix -Force
     }
 
-    # The examples come along so the Start menu entry has something to play.
+    # The examples come along so there is something to open. Nothing loads them
+    # by itself; the chooser opens here, because the Start menu entry runs with
+    # this as its working directory and the file dialog follows that when it has
+    # no directory of its own to go back to.
     $examples = Join-Path $Prefix 'Examples'
     if (Test-Path -LiteralPath 'Examples') {
         New-Item -ItemType Directory -Force -Path $examples | Out-Null
@@ -257,16 +260,10 @@ function Invoke-InstallTask {
     $shell = New-Object -ComObject WScript.Shell
     $link = $shell.CreateShortcut($Shortcut)
     $link.TargetPath = $gui
-    # The window opens empty and Project > Open Files fills it, so the entry
-    # needs no arguments -- but the examples are there, so it starts with them.
-    if (Test-Path -LiteralPath $examples) {
-        $playlist = @(Get-ChildItem -LiteralPath $examples -File |
-                      Where-Object { $_.Extension -in @('.med', '.mod') } |
-                      ForEach-Object { '"' + $_.FullName + '"' })
-        $link.Arguments = (@('window') + $playlist) -join ' '
-    } else {
-        $link.Arguments = 'window'
-    }
+    # No playlist. Starting into somebody else's four modules is a decision the
+    # entry has no business making; the player opens empty and Project > Open
+    # Files fills it. The examples are installed for that to find.
+    $link.Arguments = 'window'
     $link.WorkingDirectory = $Prefix
     $link.Description = 'MED / OctaMED and ProTracker module player'
     $link.IconLocation = "$gui,0"
