@@ -97,6 +97,11 @@ make associate  # open .med and .mod files with ModRunner
 make help       # every target, with the variables you can override
 ```
 
+Those targets are macOS. Most of what they do -- the app bundle, the disk image,
+notarisation, Launch Services -- has no meaning elsewhere, and the ones that do
+are single `swift` calls. Windows has `build.ps1` instead; see
+[Other platforms](#other-platforms).
+
 Requires macOS 13+ and a Swift 6 toolchain. The macOS app has **no third-party
 dependencies** — only Apple's own SwiftUI, AppKit and AVFoundation. There is
 nothing to fetch: the one vendored library, miniaudio, sits in the tree and is
@@ -159,9 +164,44 @@ Both surfaces read their colours from the same place: `Palette` in
 the pixel renderer. It used to be written out four times, and the copies
 drifted.
 
-What is still missing is the layer that puts those pixels in a window and sends
-mouse and key events back; until then the macOS app is the only one you can
-click on.
+The layer underneath has since arrived. `ModRunnerWindow` puts those pixels in a
+window and sends mouse and key events back -- X11 on Linux, opened with `dlopen`
+so no development package is needed to build, and Win32 on Windows, where user32
+and gdi32 are part of the system:
+
+```sh
+modrunner window <module>...    # the Classic interface, to click on
+```
+
+#### Windows
+
+There is no app bundle to build. `Package.swift` leaves the SwiftUI target out
+off Apple's platforms, so `modrunner.exe` is the whole program and SwiftPM is
+the whole build system:
+
+```powershell
+swift build -c release --product modrunner
+swift run -c release modrunner window "Examples\Happy Hour.med"
+```
+
+`build.ps1` covers the rest, including the part a plain build does not -- putting
+the program somewhere permanent:
+
+```powershell
+.\build.ps1 install      # into %LOCALAPPDATA%\Programs\ModRunner, and onto PATH
+.\build.ps1 associate    # open .med and .mod with modrunner
+.\build.ps1 uninstall    # including the associations
+.\build.ps1 help         # every task, with the options you can override
+```
+
+`install` copies the resource bundle next to the executable, which is not
+optional: SwiftPM's generated `Bundle.module` looks there first and then at an
+absolute build path compiled into the binary, so an executable copied on its own
+keeps working only until `.build` is gone -- and then calls `fatalError` on the
+first localised string.
+
+The Swift runtime is not copied along. It is on `PATH` wherever the toolchain is
+installed; a machine without one needs the runtime redistributable.
 
 ## Examples
 
