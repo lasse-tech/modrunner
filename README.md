@@ -185,6 +185,18 @@ swift build -c release --product modrunner
 swift run -c release modrunner window "Examples\Happy Hour.med"
 ```
 
+There are two executables, for the reason `python.exe` and `pythonw.exe` are two
+programs. Windows takes the subsystem from the linked image rather than from
+what a program does at run time: a console binary always gets a console, and a
+windowed one never does. `modrunner` is the console build, so `info` and
+`render` can be read and piped; `modrunnerw` is the same code linked for the
+window, so opening a module leaves no terminal standing behind the player. With
+no arguments at all `modrunnerw` opens the empty player, because there is
+nowhere for it to print usage to.
+
+`build.ps1 install` puts both in place, and points the Start menu entry and the
+`.med` / `.mod` associations at `modrunnerw`.
+
 `build.ps1` covers the rest, including the part a plain build does not -- putting
 the program somewhere permanent:
 

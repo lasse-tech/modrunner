@@ -36,6 +36,12 @@ let package = Package(
         // without an interface.
         .library(name: "ModRunnerKit", targets: ["ModRunnerKit"]),
         .executable(name: "modrunner", targets: ["ModRunnerCLI"]),
+        // The same program linked for the window rather than the console, so
+        // opening a module does not bring a terminal with it. Windows only:
+        // the subsystem is a property of the linked image, and nowhere else
+        // needs a second one. build.ps1 links it; a plain `swift build` makes
+        // it a console binary like the other, which is harmless.
+        .executable(name: "modrunnerw", targets: ["ModRunnerWindowed"]),
     ],
     targets: interfaceTargets + [
         // miniaudio, vendored: one header that is also its own implementation.
@@ -102,13 +108,29 @@ let package = Package(
             path: "Sources/ModRunnerWindow",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        // Argument parsing and the commands themselves. A library rather
+        // than part of an executable because two executables wrap it: the
+        // console build and the windowed one, which differ only in how they
+        // are linked.
+        .target(
+            name: "ModRunnerCommands",
+            dependencies: ["ModRunnerKit", "ModRunnerSkin", "ModRunnerWindow"],
+            path: "Sources/ModRunnerCommands",
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
         // The directory cannot be called "modrunner": macOS is case-insensitive
         // by default, so it would be the same directory as the GUI target's.
         // The product is named modrunner, which is what the binary is called.
         .executableTarget(
             name: "ModRunnerCLI",
-            dependencies: ["ModRunnerKit", "ModRunnerSkin", "ModRunnerWindow"],
+            dependencies: ["ModRunnerCommands"],
             path: "Sources/ModRunnerCLI",
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+        .executableTarget(
+            name: "ModRunnerWindowed",
+            dependencies: ["ModRunnerCommands"],
+            path: "Sources/ModRunnerWindowed",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(

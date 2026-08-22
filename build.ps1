@@ -40,6 +40,10 @@ Set-Location -LiteralPath $PSScriptRoot
 
 $AppName  = 'ModRunner'
 $ExeName  = 'modrunner.exe'
+# The same program linked for the window instead of the console. Windows picks
+# a subsystem from the image, not from what the program does, so one binary
+# cannot both print to a pipe and open without a terminal behind it.
+$GuiExe   = 'modrunnerw.exe'
 $Bundle   = 'ModRunner_ModRunnerKit.resources'
 $Shortcut = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\$AppName.lnk"
 $IconDir  = 'brand\windows'
@@ -113,12 +117,24 @@ function Get-ResourceObject {
 }
 
 function Invoke-BuildTask {
-    Write-Step "Building the $Config build of modrunner"
-    $arguments = @('build', '-c', $Config, '--product', 'modrunner')
     $res = Get-ResourceObject
-    if ($null -ne $res) { $arguments += @('-Xlinker', $res) }
-    Invoke-Swift $arguments
-    Write-Host "Built $(Join-Path (Get-BinPath) $ExeName)"
+    $icon = @()
+    if ($null -ne $res) { $icon = @('-Xlinker', $res) }
+
+    Write-Step "Building the $Config build of modrunner"
+    Invoke-Swift (@('build', '-c', $Config, '--product', 'modrunner') + $icon)
+
+    # Two passes rather than one: the subsystem is a linker flag and would
+    # otherwise apply to both products, and a console-less modrunner.exe would
+    # have nowhere to put what `info` and `render` write. /ENTRY keeps the
+    # ordinary `main` as the entry point, which /SUBSYSTEM:WINDOWS would
+    # otherwise expect to be WinMain.
+    Write-Step "Building the $Config build of modrunnerw, linked for the window"
+    Invoke-Swift (@('build', '-c', $Config, '--product', 'modrunnerw') + $icon +
+                  @('-Xlinker', '/SUBSYSTEM:WINDOWS', '-Xlinker', '/ENTRY:mainCRTStartup'))
+
+    $bin = Get-BinPath
+    Write-Host "Built $(Join-Path $bin $ExeName) and $(Join-Path $bin $GuiExe)"
 }
 
 function Invoke-TestTask {
@@ -195,7 +211,11 @@ function Invoke-InstallTask {
 
     Write-Step "Installing into $Prefix"
     New-Item -ItemType Directory -Force -Path $Prefix | Out-Null
-    Copy-Item -LiteralPath (Join-Path $bin $ExeName) -Destination $Prefix -Force
+    foreach ($binary in @($ExeName, $GuiExe)) {
+        $built = Join-Path $bin $binary
+        if (-not (Test-Path -LiteralPath $built)) { throw "$binary was not built; expected it in $bin" }
+        Copy-Item -LiteralPath $built -Destination $Prefix -Force
+    }
 
     # This is not optional. SwiftPM's generated `Bundle.module` looks next to the
     # executable first and then at an absolute build path compiled into the
@@ -231,9 +251,12 @@ function Invoke-InstallTask {
     }
 
     $exe = Join-Path $Prefix $ExeName
+    # The Start menu opens the windowed build: the console one would leave a
+    # terminal standing behind the player for the whole of its run.
+    $gui = Join-Path $Prefix $GuiExe
     $shell = New-Object -ComObject WScript.Shell
     $link = $shell.CreateShortcut($Shortcut)
-    $link.TargetPath = $exe
+    $link.TargetPath = $gui
     # The window opens empty and Project > Open Files fills it, so the entry
     # needs no arguments -- but the examples are there, so it starts with them.
     if (Test-Path -LiteralPath $examples) {
@@ -246,19 +269,22 @@ function Invoke-InstallTask {
     }
     $link.WorkingDirectory = $Prefix
     $link.Description = 'MED / OctaMED and ProTracker module player'
-    $link.IconLocation = "$exe,0"
+    $link.IconLocation = "$gui,0"
     $link.Save()
     Write-Host 'Added a Start menu entry.'
 
     Write-Host ''
-    Write-Host "Installed. Try:  modrunner window"
+    Write-Host "Installed. Try:  modrunnerw        (the player, no console)"
+    Write-Host "            or:  modrunner info <module>"
     Write-Host 'Associate .med and .mod with it:  .\build.ps1 associate'
 }
 
 function Invoke-AssociateTask {
-    $exe = Join-Path $Prefix $ExeName
+    # Double-clicking a module opens the windowed build, so nothing flashes up
+    # behind the player.
+    $exe = Join-Path $Prefix $GuiExe
     if (-not (Test-Path -LiteralPath $exe)) {
-        throw "modrunner is not installed in $Prefix; run .\build.ps1 install first"
+        throw "modrunnerw is not installed in $Prefix; run .\build.ps1 install first"
     }
 
     Write-Step 'Registering .med and .mod'
