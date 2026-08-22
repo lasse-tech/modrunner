@@ -19,11 +19,11 @@ final class CLITests: XCTestCase {
     /// Where the built `modrunner` is.
     ///
     /// On Apple's platforms it sits next to the test bundle. Elsewhere
-    /// `Bundle(for:)` does not point into the build directory at all, and this
-    /// suite used to skip itself in silence on Linux and Windows — which looks
-    /// exactly like passing. The build directory relative to this file is the
-    /// answer everywhere; `MODRUNNER_BINARY` overrides it for a build that
-    /// puts its products somewhere else.
+    /// `Bundle(for:)` does not point into the build directory the same way,
+    /// and this suite used to skip itself in silence on Linux and Windows —
+    /// which looks exactly like passing. The build directory relative to this
+    /// file is the answer everywhere; `MODRUNNER_BINARY` overrides it for a
+    /// build that puts its products somewhere else.
     private func binary() throws -> URL {
         var candidates: [URL] = []
 
@@ -37,19 +37,43 @@ final class CLITests: XCTestCase {
         let name = "modrunner"
         #endif
 
-        candidates.append(Bundle(for: Self.self).bundleURL
+        // On Apple's platforms the bundle is `<configuration>/ModRunner….xctest`,
+        // so the binary is one level up from it. On Windows the bundle URL is
+        // the configuration directory itself and going up overshoots into the
+        // triple's directory, so try the bundle URL both ways.
+        let bundle = Bundle(for: Self.self).bundleURL
+        candidates.append(bundle.appendingPathComponent(name))
+        candidates.append(bundle
             .deletingLastPathComponent()
             .appendingPathComponent(name))
 
-        let root = URL(fileURLWithPath: #filePath)
+        let build = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        for configuration in ["debug", "release"] {
-            candidates.append(root
-                .appendingPathComponent(".build")
-                .appendingPathComponent(configuration)
-                .appendingPathComponent(name))
+            .appendingPathComponent(".build")
+
+        // `.build/debug` and `.build/release` are symbolic links into the
+        // triple's directory, and SwiftPM cannot create them on Windows without
+        // Developer Mode — it warns and carries on, so the links are simply
+        // absent and every path through them misses. Search the triple
+        // directories themselves as well, whatever they happen to be called.
+        var roots = [build]
+        if let entries = try? FileManager.default.contentsOfDirectory(
+            at: build,
+            includingPropertiesForKeys: [.isDirectoryKey]
+        ) {
+            roots += entries.filter {
+                (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
+            }
+        }
+
+        for root in roots {
+            for configuration in ["debug", "release"] {
+                candidates.append(root
+                    .appendingPathComponent(configuration)
+                    .appendingPathComponent(name))
+            }
         }
 
         guard let url = candidates.first(where: {

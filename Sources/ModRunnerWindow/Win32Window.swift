@@ -57,8 +57,8 @@ final class Win32Window: WindowBackend {
         var frame = RECT(left: 0, top: 0, right: LONG(width), bottom: LONG(height))
         _ = AdjustWindowRect(&frame, DWORD(WS_OVERLAPPEDWINDOW), false)
 
-        var wideTitle = Array(title.utf16) + [0]
-        var wideClassName = Array(className.utf16) + [0]
+        let wideTitle = Array(title.utf16) + [0]
+        let wideClassName = Array(className.utf16) + [0]
         let created: HWND? = wideClassName.withUnsafeBufferPointer { classBuffer in
             wideTitle.withUnsafeBufferPointer { titleBuffer in
                 CreateWindowExW(0, classBuffer.baseAddress, titleBuffer.baseAddress, style,

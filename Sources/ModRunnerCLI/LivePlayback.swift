@@ -35,7 +35,7 @@ enum LivePlayback {
             // The replayer runs on the audio thread; this one only waits for it
             // to reach the end of the sequence.
             while !replayer.snapshot().hasEnded {
-                RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.2))
+                _ = RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.2))
             }
             replayer.stop()
         }
