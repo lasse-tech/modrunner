@@ -7,11 +7,12 @@
     The Makefile is the equivalent on macOS, but most of what it does -- the app
     bundle, the disk image, notarisation, Launch Services -- has no meaning here,
     and the targets that do are single `swift` calls. This covers those, plus
-    the one thing that genuinely differs: what "install" means on Windows.
+    the two things that genuinely differ: what "install" means on Windows, and
+    getting the icon into the executable, which SwiftPM will not do.
 
     There is no app to install. Package.swift leaves the SwiftUI target out off
     Apple's platforms, so the whole program is modrunner.exe and the windowed
-    interface is `modrunner window <module>`.
+    interface is `modrunner window [module]...`.
 
 .EXAMPLE
     .\build.ps1 install
@@ -21,7 +22,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'build', 'test', 'run', 'install', 'uninstall',
+    [ValidateSet('help', 'build', 'test', 'run', 'icons', 'install', 'uninstall',
                  'associate', 'associations', 'lint', 'clean', 'distclean')]
     [string] $Task = 'help',
 
@@ -39,9 +40,17 @@ Set-Location -LiteralPath $PSScriptRoot
 
 $AppName  = 'ModRunner'
 $ExeName  = 'modrunner.exe'
-$ProgId   = 'ModRunner.Module'
 $Bundle   = 'ModRunner_ModRunnerKit.resources'
 $Shortcut = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\$AppName.lnk"
+$IconDir  = 'brand\windows'
+$AppIcon  = 'ModRunner.ico'
+
+# One ProgId per extension rather than one for both, so each can carry its own
+# document icon -- the same split the macOS side makes with two .icns files.
+$FileTypes = [ordered]@{
+    '.med' = @{ ProgId = 'ModRunner.MED'; Icon = 'ModRunnerDocMED.ico'; Label = 'MED / OctaMED module' }
+    '.mod' = @{ ProgId = 'ModRunner.MOD'; Icon = 'ModRunnerDocMOD.ico'; Label = 'ProTracker module' }
+}
 
 function Write-Step([string] $Message) {
     Write-Host "==> $Message" -ForegroundColor Cyan
@@ -64,9 +73,51 @@ function Get-BinPath {
     return $lines[-1].Trim()
 }
 
+# The .ico files are repacked from the macOS artwork and committed, so a build
+# does not need this. It is here for when the artwork changes.
+function Invoke-IconsTask {
+    Write-Step 'Repacking the brand artwork into .ico files'
+    $tool = Join-Path ([System.IO.Path]::GetTempPath()) 'modrunner-mkicons.exe'
+    # `swift Scripts\...swift` cannot run it: the interpreter fails to resolve
+    # Foundation on Windows, so it is compiled and then run.
+    & swiftc -O 'Scripts\make-windows-icons.swift' -o $tool
+    if ($LASTEXITCODE -ne 0) { throw 'could not build the icon tool' }
+    & $tool
+    if ($LASTEXITCODE -ne 0) { throw 'the icon tool failed' }
+}
+
+# Windows takes a program's icon from its resource section, and SwiftPM puts
+# nothing there. llvm-rc ships with the Swift toolchain, so this needs no
+# Visual Studio; without it the build still works and the icon is just absent.
+function Get-ResourceObject {
+    $rc  = Join-Path $IconDir "$AppName.rc"
+    $res = Join-Path $IconDir "$AppName.res"
+    $ico = Join-Path $IconDir $AppIcon
+    if (-not (Test-Path -LiteralPath $rc) -or -not (Test-Path -LiteralPath $ico)) {
+        Write-Host "No icon to compile in ($IconDir); run .\build.ps1 icons to make one."
+        return $null
+    }
+    if ($null -eq (Get-Command llvm-rc -ErrorAction SilentlyContinue)) {
+        Write-Host 'llvm-rc is not on PATH; building without an icon.'
+        return $null
+    }
+    $current = Get-Location
+    try {
+        Set-Location -LiteralPath $IconDir
+        & llvm-rc /FO "$AppName.res" "$AppName.rc"
+        if ($LASTEXITCODE -ne 0) { throw 'llvm-rc failed' }
+    } finally {
+        Set-Location -LiteralPath $current
+    }
+    return (Resolve-Path -LiteralPath $res).Path
+}
+
 function Invoke-BuildTask {
     Write-Step "Building the $Config build of modrunner"
-    Invoke-Swift @('build', '-c', $Config, '--product', 'modrunner')
+    $arguments = @('build', '-c', $Config, '--product', 'modrunner')
+    $res = Get-ResourceObject
+    if ($null -ne $res) { $arguments += @('-Xlinker', $res) }
+    Invoke-Swift $arguments
     Write-Host "Built $(Join-Path (Get-BinPath) $ExeName)"
 }
 
@@ -81,8 +132,7 @@ function Invoke-RunTask {
 }
 
 function Invoke-LintTask {
-    $swiftlint = Get-Command swiftlint -ErrorAction SilentlyContinue
-    if ($null -eq $swiftlint) {
+    if ($null -eq (Get-Command swiftlint -ErrorAction SilentlyContinue)) {
         Write-Host 'SwiftLint is not installed; skipping.'
         return
     }
@@ -93,7 +143,9 @@ function Invoke-LintTask {
 function Invoke-CleanTask {
     Write-Step 'Removing build products'
     Invoke-Swift @('package', 'clean')
-    if (Test-Path -LiteralPath 'build') { Remove-Item -Recurse -Force -LiteralPath 'build' }
+    foreach ($path in @('build', (Join-Path $IconDir "$AppName.res"))) {
+        if (Test-Path -LiteralPath $path) { Remove-Item -Recurse -Force -LiteralPath $path }
+    }
 }
 
 function Invoke-DistcleanTask {
@@ -124,8 +176,8 @@ function Remove-FromUserPath([string] $Directory) {
     return $true
 }
 
-# The shell caches file associations. Without this the new icon and the new
-# "open with" only turn up after a sign-out.
+# The shell caches file associations and their icons. Without this the change
+# only turns up after a sign-out.
 function Update-ShellAssociations {
     if (-not ('ModRunner.Shell32' -as [type])) {
         $signature = '[System.Runtime.InteropServices.DllImport("shell32.dll")]' +
@@ -159,6 +211,12 @@ function Invoke-InstallTask {
     }
     Copy-Item -LiteralPath $resources -Destination $Prefix -Recurse -Force
 
+    # The document icons cannot be read out of the executable -- it carries only
+    # its own -- so the .ico files come along and the registry points at them.
+    if (Test-Path -LiteralPath $IconDir) {
+        Copy-Item -Path (Join-Path $IconDir '*.ico') -Destination $Prefix -Force
+    }
+
     # The examples come along so the Start menu entry has something to play.
     $examples = Join-Path $Prefix 'Examples'
     if (Test-Path -LiteralPath 'Examples') {
@@ -173,26 +231,27 @@ function Invoke-InstallTask {
     }
 
     $exe = Join-Path $Prefix $ExeName
+    $shell = New-Object -ComObject WScript.Shell
+    $link = $shell.CreateShortcut($Shortcut)
+    $link.TargetPath = $exe
+    # The window opens empty and Project > Open Files fills it, so the entry
+    # needs no arguments -- but the examples are there, so it starts with them.
     if (Test-Path -LiteralPath $examples) {
         $playlist = @(Get-ChildItem -LiteralPath $examples -File |
                       Where-Object { $_.Extension -in @('.med', '.mod') } |
                       ForEach-Object { '"' + $_.FullName + '"' })
-        if ($playlist.Count -gt 0) {
-            $shell = New-Object -ComObject WScript.Shell
-            $link = $shell.CreateShortcut($Shortcut)
-            $link.TargetPath = $exe
-            # `window` needs at least one module, so the entry opens the examples
-            # as a playlist -- the same thing `make run` does on macOS.
-            $link.Arguments = 'window ' + ($playlist -join ' ')
-            $link.WorkingDirectory = $Prefix
-            $link.Description = 'MED / OctaMED and ProTracker module player'
-            $link.Save()
-            Write-Host 'Added a Start menu entry that opens the bundled examples.'
-        }
+        $link.Arguments = (@('window') + $playlist) -join ' '
+    } else {
+        $link.Arguments = 'window'
     }
+    $link.WorkingDirectory = $Prefix
+    $link.Description = 'MED / OctaMED and ProTracker module player'
+    $link.IconLocation = "$exe,0"
+    $link.Save()
+    Write-Host 'Added a Start menu entry.'
 
     Write-Host ''
-    Write-Host "Installed. Try:  modrunner window `"$Module`""
+    Write-Host "Installed. Try:  modrunner window"
     Write-Host 'Associate .med and .mod with it:  .\build.ps1 associate'
 }
 
@@ -204,15 +263,22 @@ function Invoke-AssociateTask {
 
     Write-Step 'Registering .med and .mod'
     $classes = 'HKCU:\Software\Classes'
-    New-Item -Path "$classes\$ProgId\shell\open\command" -Force | Out-Null
-    New-Item -Path "$classes\$ProgId\DefaultIcon" -Force | Out-Null
-    Set-ItemProperty -Path "$classes\$ProgId" -Name '(default)' -Value 'MED / OctaMED module'
-    Set-ItemProperty -Path "$classes\$ProgId\DefaultIcon" -Name '(default)' -Value "$exe,0"
-    Set-ItemProperty -Path "$classes\$ProgId\shell\open\command" -Name '(default)' -Value ('"' + $exe + '" window "%1"')
+    foreach ($extension in $FileTypes.Keys) {
+        $type = $FileTypes[$extension]
+        $progId = $type.ProgId
+        $icon = Join-Path $Prefix $type.Icon
+        # Falls back to the executable's own icon if the document one is not
+        # installed, which is better than a registry entry pointing at nothing.
+        if (-not (Test-Path -LiteralPath $icon)) { $icon = "$exe,0" }
 
-    foreach ($extension in @('.med', '.mod')) {
+        New-Item -Path "$classes\$progId\shell\open\command" -Force | Out-Null
+        New-Item -Path "$classes\$progId\DefaultIcon" -Force | Out-Null
+        Set-ItemProperty -Path "$classes\$progId" -Name '(default)' -Value $type.Label
+        Set-ItemProperty -Path "$classes\$progId\DefaultIcon" -Name '(default)' -Value $icon
+        Set-ItemProperty -Path "$classes\$progId\shell\open\command" -Name '(default)' -Value ('"' + $exe + '" window "%1"')
+
         New-Item -Path "$classes\$extension" -Force | Out-Null
-        Set-ItemProperty -Path "$classes\$extension" -Name '(default)' -Value $ProgId
+        Set-ItemProperty -Path "$classes\$extension" -Name '(default)' -Value $progId
     }
 
     Update-ShellAssociations
@@ -221,45 +287,40 @@ function Invoke-AssociateTask {
 
 function Invoke-AssociationsTask {
     $classes = 'HKCU:\Software\Classes'
-    foreach ($extension in @('.med', '.mod')) {
+    foreach ($extension in $FileTypes.Keys) {
         $key = "$classes\$extension"
         if (Test-Path -LiteralPath $key) {
             $value = (Get-ItemProperty -LiteralPath $key).'(default)'
             Write-Host ('{0,-6} {1}' -f $extension, $value)
+            $icon = "$classes\$value\DefaultIcon"
+            if (Test-Path -LiteralPath $icon) {
+                Write-Host ('{0,-6}   icon: {1}' -f '', (Get-ItemProperty -LiteralPath $icon).'(default)')
+            }
         } else {
             Write-Host ('{0,-6} not registered for this user' -f $extension)
         }
-    }
-    $command = "$classes\$ProgId\shell\open\command"
-    if (Test-Path -LiteralPath $command) {
-        Write-Host ''
-        Write-Host "$ProgId opens with: $((Get-ItemProperty -LiteralPath $command).'(default)')"
     }
 }
 
 function Invoke-UninstallTask {
     Write-Step "Removing $Prefix"
-    if (Test-Path -LiteralPath $Prefix) {
-        Remove-Item -Recurse -Force -LiteralPath $Prefix
-    }
-    if (Test-Path -LiteralPath $Shortcut) {
-        Remove-Item -Force -LiteralPath $Shortcut
-    }
-    if (Remove-FromUserPath $Prefix) {
-        Write-Host "Removed $Prefix from your PATH."
-    }
+    if (Test-Path -LiteralPath $Prefix) { Remove-Item -Recurse -Force -LiteralPath $Prefix }
+    if (Test-Path -LiteralPath $Shortcut) { Remove-Item -Force -LiteralPath $Shortcut }
+    if (Remove-FromUserPath $Prefix) { Write-Host "Removed $Prefix from your PATH." }
 
     $classes = 'HKCU:\Software\Classes'
-    if (Test-Path -LiteralPath "$classes\$ProgId") {
-        Remove-Item -Recurse -Force -LiteralPath "$classes\$ProgId"
-    }
-    # Only give back the extensions this script claimed; something else may own
-    # them by now.
-    foreach ($extension in @('.med', '.mod')) {
+    foreach ($extension in $FileTypes.Keys) {
+        $progId = $FileTypes[$extension].ProgId
+        if (Test-Path -LiteralPath "$classes\$progId") {
+            Remove-Item -Recurse -Force -LiteralPath "$classes\$progId"
+        }
+        # Only give back an extension this script claimed; something else may
+        # own it by now.
         $key = "$classes\$extension"
         if (Test-Path -LiteralPath $key) {
-            $value = (Get-ItemProperty -LiteralPath $key).'(default)'
-            if ($value -eq $ProgId) { Remove-Item -Recurse -Force -LiteralPath $key }
+            if ((Get-ItemProperty -LiteralPath $key).'(default)' -eq $progId) {
+                Remove-Item -Recurse -Force -LiteralPath $key
+            }
         }
     }
     Update-ShellAssociations
@@ -269,9 +330,10 @@ function Invoke-UninstallTask {
 function Invoke-HelpTask {
     Write-Host "$AppName -- available tasks:"
     Write-Host ''
-    Write-Host '  build          Compile modrunner'
+    Write-Host '  build          Compile modrunner, with its icon'
     Write-Host '  test           Run the test suite'
     Write-Host '  run            Open a module in a window'
+    Write-Host '  icons          Repack the brand artwork into .ico files'
     Write-Host '  install        Copy modrunner into Programs, add it to PATH'
     Write-Host '  uninstall      Undo install, including the associations'
     Write-Host '  associate      Make modrunner open .med and .mod files'
@@ -287,7 +349,7 @@ function Invoke-HelpTask {
     Write-Host ''
     Write-Host 'There is no app bundle on Windows: Package.swift leaves the SwiftUI'
     Write-Host 'target out off Apple platforms, so modrunner.exe is the whole program'
-    Write-Host 'and `modrunner window` is its interface.'
+    Write-Host 'and `modrunner window` is its interface. It opens without a module.'
 }
 
 switch ($Task) {
@@ -295,6 +357,7 @@ switch ($Task) {
     'build'        { Invoke-BuildTask }
     'test'         { Invoke-TestTask }
     'run'          { Invoke-RunTask }
+    'icons'        { Invoke-IconsTask }
     'install'      { Invoke-InstallTask }
     'uninstall'    { Invoke-UninstallTask }
     'associate'    { Invoke-AssociateTask }

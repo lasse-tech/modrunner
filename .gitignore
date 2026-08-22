@@ -6,9 +6,11 @@ build/
 
 # The brand package stays out of the repository, except the parts the build and
 # the source actually need: the macOS icon that make-app.sh copies into the
-# bundle, and the README documenting the palette Skin.swift uses.
+# bundle, the Windows icons and the .rc that build.ps1 links into the
+# executable, and the README documenting the palette Skin.swift uses.
 brand/*
 !brand/macos/
+!brand/windows/
 !brand/README.txt
 
 # Intermediates a compiler run in the source root leaves behind.
@@ -16,3 +18,6 @@ brand/*
 *.d
 *.dia
 *.swiftdeps
+
+# Compiled from brand/windows/ModRunner.rc on every build.
+brand/windows/*.res

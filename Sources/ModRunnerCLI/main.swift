@@ -10,7 +10,7 @@ usage:
   modrunner dump   <module> [--block N]        pattern data as text
   modrunner play   <module>...                 play through the audio device
   modrunner screenshot <module> -o <file.png>  draw the classic interface
-  modrunner window <module>...                 the classic player in a window
+  modrunner window [module]...                 the classic player in a window
 
 options:
   -o, --output <file>   where render writes; - writes the WAV to stdout

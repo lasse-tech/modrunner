@@ -27,7 +27,6 @@ enum WindowPlayer {
     }
 
     static func run(_ arguments: Arguments) throws -> Int32 {
-        guard !arguments.operands.isEmpty else { throw CommandError.noModules }
         guard Window.isAvailable else {
             warn("this platform has no window backend; the macOS app is the interface there")
             return 2
@@ -42,8 +41,19 @@ enum WindowPlayer {
         var index = 0
         let replayer = Replayer()
         let audio = AudioOutput(replayer: replayer)
-        var module = try ModuleLoader.load(url: playlist[0].url)
-        replayer.load(module: module)
+
+        // Nothing has to be loaded for the window to go up. The skin already
+        // draws the empty player — it says "no module" and leaves the fields
+        // dashed — and Project > Open Files fills it, so an empty playlist is
+        // a state to open in rather than a reason to refuse. A module named on
+        // the command line still has to load: being handed a file and silently
+        // showing an empty window would be worse than saying so.
+        var module: MMDModule?
+        if let first = playlist.first {
+            let loaded = try ModuleLoader.load(url: first.url)
+            module = loaded
+            replayer.load(module: loaded)
+        }
 
         do {
             try audio.start()
@@ -52,11 +62,12 @@ enum WindowPlayer {
             // scrolls, the meters do not.
             warn("no audio output: \(error.localizedDescription)")
         }
-        replayer.play()
+        if module != nil { replayer.play() }
 
         var showTracker = !arguments.has("--no-tracker")
         var screen = PlayerScreen(module: module, snapshot: replayer.snapshot(),
-                                  playlist: playlist.map(\.title), currentIndex: index,
+                                  playlist: playlist.map(\.title),
+                                  currentIndex: playlist.isEmpty ? nil : index,
                                   showTracker: showTracker)
 
         let window = try Window.open(title: "ModRunner",
@@ -73,6 +84,25 @@ enum WindowPlayer {
         /// Adds what the chooser handed back, skipping anything already listed.
         /// Nothing starts playing: the macOS app appends too, and having Open
         /// interrupt the music would be a surprise rather than a convenience.
+        /// Where a chooser should open: beside the module being played, or
+        /// nowhere in particular when there is none.
+        func currentDrawer() -> URL? {
+            guard playlist.indices.contains(index) else { return nil }
+            return playlist[index].url.deletingLastPathComponent()
+        }
+
+        /// Switches to an entry and starts it. A file that will not load is
+        /// passed over rather than fatal: the playlist is whatever the user
+        /// pointed at, and one bad file in it should not take the window down.
+        func show(_ position: Int) {
+            guard playlist.indices.contains(position),
+                  let loaded = try? ModuleLoader.load(url: playlist[position].url) else { return }
+            index = position
+            module = loaded
+            replayer.load(module: loaded)
+            replayer.play()
+        }
+
         func add(_ urls: [URL]) {
             for url in ModuleLoader.modules(in: urls)
             where !playlist.contains(where: { $0.url == url }) {
@@ -90,29 +120,31 @@ enum WindowPlayer {
             case .previousPosition: replayer.previousPosition()
             case .nextPosition: replayer.nextPosition()
             case .previousModule, .nextModule:
+                guard !playlist.isEmpty else { break }
                 let step = { if case .nextModule = action { return 1 } else { return -1 } }()
-                let next = (index + step + playlist.count) % playlist.count
-                if let loaded = try? ModuleLoader.load(url: playlist[next].url) {
-                    index = next
-                    module = loaded
-                    replayer.load(module: module)
-                    replayer.play()
-                }
+                show((index + step + playlist.count) % playlist.count)
             case .toggleTracker: showTracker.toggle()
             case .closeWindow: running = false
             case .minimise: window.minimise()
             case .sendToBack: window.sendToBack()
             case .beginDrag: window.beginDrag()
             case .openFiles:
-                add(window.chooseFiles(startingAt: playlist[index].url.deletingLastPathComponent()))
+                let wasEmpty = playlist.isEmpty
+                add(window.chooseFiles(startingAt: currentDrawer()))
+                // Opening into an empty player starts playing, because there is
+                // nothing to interrupt. With a module already up, Open only
+                // appends, the way the macOS app does.
+                if wasEmpty { show(0) }
             case .openDrawer:
-                let here = playlist[index].url.deletingLastPathComponent()
-                if let drawer = window.chooseDrawer(startingAt: here) { add([drawer]) }
+                let wasEmpty = playlist.isEmpty
+                if let drawer = window.chooseDrawer(startingAt: currentDrawer()) { add([drawer]) }
+                if wasEmpty { show(0) }
             case .showAbout: showAbout = true
             case .dismissAbout: showAbout = false
             case .seek(let fraction):
                 // The slider addresses the play sequence, which is what the
                 // position field counts in.
+                guard let module else { break }
                 let count = module.playSequence.count
                 guard count > 0 else { break }
                 let target = Int((Double(count) * fraction).rounded(.down))
@@ -123,7 +155,8 @@ enum WindowPlayer {
         while running {
             let snapshot = replayer.snapshot()
             screen = PlayerScreen(module: module, snapshot: snapshot,
-                                  playlist: playlist.map(\.title), currentIndex: index,
+                                  playlist: playlist.map(\.title),
+                                  currentIndex: playlist.isEmpty ? nil : index,
                                   showTracker: showTracker)
             screen.menu = menu
             screen.showAbout = showAbout
@@ -192,12 +225,7 @@ enum WindowPlayer {
             }
 
             if replayer.snapshot().hasEnded, playlist.count > 1 {
-                index = (index + 1) % playlist.count
-                if let loaded = try? ModuleLoader.load(url: playlist[index].url) {
-                    module = loaded
-                    replayer.load(module: module)
-                    replayer.play()
-                }
+                show((index + 1) % playlist.count)
             }
 
             // Fifty frames a second is more than a chunky interface needs and

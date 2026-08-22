@@ -1,0 +1,12 @@
+// The application icon, compiled into modrunner.exe.
+//
+// Windows takes the lowest-numbered ICON resource as the icon a program shows
+// in Explorer, on the taskbar and in its title bar, so this one is 1. There is
+// no VERSIONINFO here on purpose: it would carry a version number that has to
+// be kept in step with the changelog by hand, and the icon is what was missing.
+//
+//   llvm-rc /fo ModRunner.res ModRunner.rc
+//
+// llvm-rc ships with the Swift toolchain, so this needs no Visual Studio.
+
+1 ICON "ModRunner.ico"

@@ -170,7 +170,8 @@ so no development package is needed to build, and Win32 on Windows, where user32
 and gdi32 are part of the system:
 
 ```sh
-modrunner window <module>...    # the Classic interface, to click on
+modrunner window [module]...    # the Classic interface, to click on;
+                                # opens empty, Project > Open Files fills it
 ```
 
 #### Windows
@@ -191,8 +192,22 @@ the program somewhere permanent:
 .\build.ps1 install      # into %LOCALAPPDATA%\Programs\ModRunner, and onto PATH
 .\build.ps1 associate    # open .med and .mod with modrunner
 .\build.ps1 uninstall    # including the associations
+.\build.ps1 icons        # repack the brand artwork into .ico files
 .\build.ps1 help         # every task, with the options you can override
 ```
+
+If PowerShell refuses with "die Ausfuehrung von Skripts auf diesem System
+deaktiviert ist", the execution policy is at its default of `Restricted`. One
+line fixes it, per user and without an administrator:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
+
+Windows takes a program's icon from its resource section and SwiftPM puts
+nothing there, so `build` compiles `brand/windows/ModRunner.rc` with `llvm-rc`
+— which ships with the Swift toolchain — and links the result in. A plain
+`swift build` still works and produces an executable without an icon.
 
 `install` copies the resource bundle next to the executable, which is not
 optional: SwiftPM's generated `Bundle.module` looks there first and then at an
