@@ -253,7 +253,6 @@ function Invoke-InstallTask {
         Write-Host "$Prefix is already on your PATH."
     }
 
-    $exe = Join-Path $Prefix $ExeName
     # The Start menu opens the windowed build: the console one would leave a
     # terminal standing behind the player for the whole of its run.
     $gui = Join-Path $Prefix $GuiExe

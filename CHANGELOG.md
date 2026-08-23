@@ -6,6 +6,66 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `build.ps1`, the Windows counterpart to `make install`. `make` is the entry
+  point on macOS and most of what it does — the app bundle, the disk image,
+  notarisation — has no meaning anywhere else, so what a Windows script is for
+  is the part a plain `swift build` leaves out: the executables and their
+  resource bundle into `%LOCALAPPDATA%\Programs\ModRunner`, a PATH entry, a
+  Start menu entry, and `.med` / `.mod` registered under `HKCU` — per user and
+  without an administrator. `uninstall` gives all of it back, and only takes
+  back the extensions the script itself claimed
+- `modrunnerw`, the same program linked with `/SUBSYSTEM:WINDOWS`, so opening a
+  module leaves no terminal standing behind the player. Windows takes the
+  subsystem from the linked image rather than from what a program does at run
+  time, so one binary cannot both write to a pipe and open without a console —
+  the split `python.exe` and `pythonw.exe` have made for years. `modrunner`
+  stays the console build, so `info` and `render` can be read and piped; the
+  Start menu entry and the file associations point at `modrunnerw`
+- `ModRunnerCommands`, the argument parsing and the commands as a library, so
+  each of the two executables is a wrapper around `CLI.main()` and the
+  difference between them is how they are linked and nothing else
+- Windows icons. `Scripts/make-windows-icons.swift` repacks the artwork that
+  already existed in Apple's containers — the `.iconset` PNGs and the ones
+  inside the two `.icns` — without drawing or resampling anything, `build.ps1`
+  compiles the `.rc` with `llvm-rc` from the Swift toolchain and links it in,
+  and `associate` registers one ProgId per extension so `.med` and `.mod` carry
+  their own document icons
+- The Win32 window draws the Classic skin itself: `WS_POPUP` with no caption,
+  because the skin paints its own title bar and two of them is one too many,
+  and centred in the work area rather than wherever `CW_USEDEFAULT` puts it
+
+### Changed
+
+- The window player opens without a module. The skin has drawn the empty player
+  all along, so an empty playlist is a state to open in rather than a reason to
+  refuse, and Project > Open Files fills it. A module named on the command line
+  still has to load — being handed a file and silently showing an empty window
+  would be worse than saying so
+- The Start menu entry starts on an empty playlist rather than on every
+  installed example. The examples are still installed and the file chooser
+  opens where they are, because the entry runs with the install directory as
+  its working directory
+
+### Fixed
+
+- The LED and Load gadgets in the VIEW row of the portable skin were painted on
+  and neither was reachable: the renderer and the hit testing each carried
+  their own copy of the widths and the spacing, and only the drawing side had
+  been kept up to date. Both come from one list now, so a gadget cannot be
+  drawn without also being clickable. LED is the Amiga output filter, Load is
+  Project > Open Files, and Tracks and LED show their state
+- The command-line suite skipped all nine of its tests on Windows and `swift
+  test` still exited 0, so the Windows CI had been green without ever running
+  the command line. It looked for the binary in `.build/debug` and
+  `.build/release`, which are symbolic links SwiftPM cannot create there
+  without Developer Mode; the triple's own directories are searched now, found
+  by enumerating `.build` rather than by naming a triple
+- `README.md` no longer says the layer that puts the skin in a window is
+  missing and the macOS app is the only interface you can click on, which
+  stopped being true when X11 and Win32 arrived
+
 ## [1.1.0] - 2026-08-18
 
 ### Added

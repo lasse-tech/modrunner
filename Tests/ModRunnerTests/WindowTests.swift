@@ -102,28 +102,32 @@ final class WindowTests: XCTestCase {
     /// because each carried its own copy of the layout and only one of them was
     /// ever updated. They looked like buttons and did nothing. Both now come
     /// from `viewGadgets`, and this is what keeps them from parting again.
+    ///
+    /// The expected set is read out of `viewGadgets` rather than written down
+    /// here, so a gadget added there is covered by this without being named a
+    /// second time — which is the same drift, one layer up.
     func testEveryViewGadgetIsClickable() {
         var screen = PlayerScreen()
         screen.playlist = ["one"]
 
+        // Only to enumerate them: which gadgets there are and what they are
+        // called does not depend on the rectangle, and the real one belongs to
+        // a layout that is private to the renderer.
+        let gadgets = PlayerScreenRenderer.viewGadgets(for: screen, in: Rect(0, 0, 544, 30))
+        XCTAssertFalse(gadgets.isEmpty, "the VIEW row is drawn with gadgets in it")
+
         let canvas = PlayerScreenRenderer.render(screen)
-        var reported: Set<String> = []
-        for control in PlayerScreenRenderer.controls(for: screen) {
-            let name: String
-            switch control.role {
-            case .tracker:   name = "Tracks"
-            case .filter:    name = "LED"
-            case .openFiles: name = "Load"
-            default: continue
+        let controls = PlayerScreenRenderer.controls(for: screen)
+        for gadget in gadgets {
+            guard let control = controls.first(where: { $0.role == gadget.role }) else {
+                XCTFail("\(gadget.label) is drawn in the VIEW row but cannot be clicked")
+                continue
             }
-            reported.insert(name)
             // And reported where it was drawn: the raised edge of a button,
             // not the panel behind it.
             XCTAssertEqual(canvas.pixel(control.rect.x + 1, control.rect.y + 1), Theme.shine,
-                           "\(name) is reported somewhere other than where it is drawn")
+                           "\(gadget.label) is reported somewhere other than where it is drawn")
         }
-        XCTAssertEqual(reported, ["Tracks", "LED", "Load"],
-                       "a gadget in the VIEW row is drawn but cannot be clicked")
     }
 
     /// The renderer reports where it drew the controls, and the window layer

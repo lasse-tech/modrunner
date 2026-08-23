@@ -72,7 +72,7 @@ jobs:
         run: xvfb-run -a swift test
 
   windows:
-    name: Engine and CLI on Windows
+    name: Engine, CLI and player on Windows
     runs-on: windows-latest
 
     steps:
@@ -92,6 +92,14 @@ jobs:
 
       - name: Build the engine and the command line
         run: swift build -c release --product modrunner
+
+      # The binary Windows actually opens a module with, and the only place it
+      # is linked the way it ships: /SUBSYSTEM:WINDOWS is what leaves the
+      # console out, and /ENTRY keeps the ordinary `main`, which the windowed
+      # subsystem would otherwise expect to be WinMain. build.ps1 does the
+      # same, but nothing here runs build.ps1.
+      - name: Build the windowed player
+        run: swift build -c release --product modrunnerw -Xlinker '/SUBSYSTEM:WINDOWS' -Xlinker '/ENTRY:mainCRTStartup'
 
       - name: Test
         run: swift test
