@@ -194,6 +194,12 @@ window, so opening a module leaves no terminal standing behind the player. With
 no arguments at all `modrunnerw` opens the empty player, because there is
 nowhere for it to print usage to.
 
+Nothing it would have written to stderr is dropped: anything the player has to
+say -- a module that will not load, an audio device that will not open --
+arrives as a requester instead. A player that is handed a file, says nothing and
+exits looks broken, which is the fault the second binary is there to avoid
+rather than to cause.
+
 `build.ps1 install` puts both in place, and points the Start menu entry and the
 `.med` / `.mod` associations at `modrunnerw`.
 

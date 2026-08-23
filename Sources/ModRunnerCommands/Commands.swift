@@ -1,9 +1,23 @@
 import Foundation
 import ModRunnerKit
+import ModRunnerWindow
+
+/// Whether there is a stderr worth writing to.
+///
+/// False in the windowed build, which is linked without a console — that
+/// being the whole reason it is a second binary. `CLI.main` sets it once
+/// before any command runs, and nothing else writes to it.
+var hasConsole = true
 
 /// Anything the commands need to say that is not the result itself goes to
 /// stderr, so `modrunner render … -o -` can be piped.
+///
+/// Except where there is no stderr to write to. The windowed build would drop
+/// all of it, and a player that is handed a module it cannot open and then
+/// exits in silence looks broken — so it goes to a requester there, and back
+/// to stderr where the platform has none.
 func warn(_ message: String) {
+    if !hasConsole, Requester.show(message, title: "ModRunner") { return }
     FileHandle.standardError.write(Data("modrunner: \(message)\n".utf8))
 }
 

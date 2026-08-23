@@ -23,6 +23,12 @@ All notable changes to this project are documented here. The format follows
   the split `python.exe` and `pythonw.exe` have made for years. `modrunner`
   stays the console build, so `info` and `render` can be read and piped; the
   Start menu entry and the file associations point at `modrunnerw`
+- A requester behind that, so nothing the windowed build would have written to
+  stderr is dropped. `warn` goes to a `MessageBox` where there is no console,
+  and back to stderr where the platform has no requester of its own: a module
+  that will not load says so, rather than leaving a double-click looking like
+  nothing happened. `--help` says where the commands are documented instead of
+  laying out a column-aligned usage block in a proportional face
 - `ModRunnerCommands`, the argument parsing and the commands as a library, so
   each of the two executables is a wrapper around `CLI.main()` and the
   difference between them is how they are linked and nothing else

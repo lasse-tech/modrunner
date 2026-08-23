@@ -1,5 +1,6 @@
 import Foundation
 import ModRunnerKit
+import ModRunnerWindow
 
 /// Argument dispatch, shared by the two executables that wrap it.
 ///
@@ -39,6 +40,19 @@ public enum CLI {
     Exit codes: 0 success, 1 a module failed to load, 2 no audio device.
     """
 
+    /// What `--help` says where there is no console to print the usage to.
+    ///
+    /// Not `usage` in a requester: its columns are aligned with spaces and a
+    /// requester draws in a proportional face, so it would arrive as a ragged
+    /// block. The build that can lay it out properly is one letter away.
+    static let usageWithoutConsole = """
+    modrunnerw is the player, linked without a console behind it.
+
+    The commands and their options are in the console build:
+
+        modrunner --help
+    """
+
     static let commands: Set<String> = ["info", "render", "dump", "play", "screenshot", "window"]
 
     /// Runs the command named on the command line and exits.
@@ -47,7 +61,15 @@ public enum CLI {
     ///   build has none and prints its usage. The windowed build opens the
     ///   player: it has no console to print to, and double-clicking a program
     ///   should show something rather than exit in silence.
-    public static func main(defaultCommand: String? = nil) -> Never {
+    /// - Parameter hasConsole: whether there is a stderr worth writing to.
+    ///   False in the windowed build, where everything that would have gone
+    ///   there goes to a requester instead. Without this the second binary
+    ///   would cause the fault it exists to avoid: a module that fails to load
+    ///   would take the player down without a word about why.
+    public static func main(defaultCommand: String? = nil,
+                            hasConsole console: Bool = true) -> Never {
+        // Read by `warn`, which is what every command says anything through.
+        hasConsole = console
         var raw = Array(CommandLine.arguments.dropFirst())
 
         if raw.isEmpty, let defaultCommand {
@@ -55,8 +77,13 @@ public enum CLI {
         }
 
         if raw.isEmpty || raw.contains("-h") || raw.contains("--help") {
+            let status = raw.isEmpty ? Int32(1) : 0
+            if !hasConsole,
+               Requester.show(usageWithoutConsole, title: "ModRunner", kind: .information) {
+                exit(status)
+            }
             print(usage)
-            exit(raw.isEmpty ? 1 : 0)
+            exit(status)
         }
 
         do {
@@ -74,7 +101,10 @@ public enum CLI {
             exit(status)
         } catch let error as Arguments.ParseError {
             warn(error.localizedDescription)
-            warn("run `modrunner --help` for the commands")
+            // Only where it can be acted on. In the windowed build this would
+            // be a second requester to dismiss, naming a command there is no
+            // prompt in front of to type it at.
+            if hasConsole { warn("run `modrunner --help` for the commands") }
             exit(1)
         } catch {
             warn(error.localizedDescription)
