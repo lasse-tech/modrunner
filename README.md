@@ -99,8 +99,8 @@ make help       # every target, with the variables you can override
 
 Those targets are macOS. Most of what they do -- the app bundle, the disk image,
 notarisation, Launch Services -- has no meaning elsewhere, and the ones that do
-are single `swift` calls. Windows has `build.ps1` instead; see
-[Other platforms](#other-platforms).
+are single `swift` calls. Windows has `build.ps1` instead, and `Makefile.bat`
+for the hands that type `make` anyway; see [Other platforms](#other-platforms).
 
 Requires macOS 13+ and a Swift 6 toolchain. The macOS app has **no third-party
 dependencies** — only Apple's own SwiftUI, AppKit and AVFoundation. There is
@@ -199,6 +199,25 @@ the whole build system:
 swift build -c release --product modrunner
 swift run -c release modrunner window "Examples\Happy Hour.med"
 ```
+
+`build.ps1` is what `make` is on macOS — the targets that mean something here,
+plus the two things that genuinely differ: what installing means on Windows, and
+getting the icon into the executable, which SwiftPM will not do. From a `cmd`
+prompt, `Makefile.bat` forwards the same targets, with make's variables:
+
+```powershell
+.uild.ps1 install                     # or: Makefile.bat install
+.uild.ps1 help                        # every target
+```
+
+```bat
+Makefile.bat clean distclean
+Makefile.bat build CONFIG=debug
+Makefile.bat run MODULE="Examples\Happy Hour.med"
+```
+
+It is a wrapper and nothing else: every target goes to `build.ps1`, so there is
+one description of what `install` does rather than two that drift apart.
 
 There are two executables, for the reason `python.exe` and `pythonw.exe` are two
 programs. Windows takes the subsystem from the linked image rather than from

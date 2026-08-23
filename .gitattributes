@@ -4,6 +4,10 @@
 *.yml     text eol=lf
 Makefile  text eol=lf
 *.sh      text eol=lf
+# cmd.exe wants the carriage returns. A batch file with bare newlines does not
+# fail outright — it runs its labels and its parenthesised blocks wrong, which
+# is a much worse way to find out.
+*.bat     text eol=crlf
 
 # Amiga-era documents and modules are historical artefacts — never touch them.
 docs/*.txt      -text

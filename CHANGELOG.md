@@ -8,6 +8,14 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- `Makefile.bat`, so `make install` typed at a `cmd` prompt does something.
+  Three doors into the same house: `make` on macOS, `build.ps1` on Windows, and
+  this for the shell that has neither. Every target is forwarded rather than
+  reimplemented, and make's variables come along — `CONFIG=`, `MODULE=`,
+  `PREFIX=`, and `INSTALL_DIR=` under the name the Makefile uses. The parsing
+  looks the way it does because `cmd` breaks a batch file's arguments apart at
+  equals signs as well as at spaces, so `CONFIG=debug` never arrives as one
+  argument and there is nothing left to split
 - Mini and Full in the portable player. The two gadgets on the right of the VIEW
   row were drawn and wired to nothing, with a comment saying the portable
   interface could not do either yet. It can: `WindowBackend` gained a
