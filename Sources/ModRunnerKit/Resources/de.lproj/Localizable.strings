@@ -80,6 +80,9 @@
 "tooltip.playNext"       = "Nächstes Modul";
 "tooltip.open"           = "Module oder einen Ordner öffnen…";
 "tooltip.tracks"         = "Tracker ein- oder ausblenden";
+"tooltip.songPosition"   = "Ziehen, um im Song zu springen";
+"tooltip.volume"         = "Ausgangslautstärke";
+"tooltip.playlistEntry"  = "%@ abspielen";
 "tooltip.visualizer"     = "Visualisierung wählen";
 "tooltip.licences"       = "Die Lizenzen der zugrunde liegenden Arbeit zeigen";
 "tooltip.aboutClose"     = "Dieses Fenster schließen";

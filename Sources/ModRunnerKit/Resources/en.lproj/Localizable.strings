@@ -80,6 +80,9 @@
 "tooltip.playNext"       = "Next module";
 "tooltip.open"           = "Open modules or a folder…";
 "tooltip.tracks"         = "Show or hide the tracker";
+"tooltip.songPosition"   = "Drag to move through the song";
+"tooltip.volume"         = "Output volume";
+"tooltip.playlistEntry"  = "Play %@";
 "tooltip.visualizer"     = "Choose the visualisation";
 "tooltip.licences"       = "Show the licences of the work this builds on";
 "tooltip.aboutClose"     = "Close this panel";

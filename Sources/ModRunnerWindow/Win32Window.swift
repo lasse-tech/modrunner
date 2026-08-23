@@ -21,10 +21,15 @@ final class Win32Window: WindowBackend {
     private static var currentSize: (width: Int, height: Int) = (0, 0)
     /// Where the pointer and the window were when a title bar drag began.
     private static var drag: (cursor: POINT, origin: POINT)?
+    /// Whether WM_MOUSELEAVE has been asked for. It is a one-shot request, so
+    /// it has to be renewed every time the pointer comes back.
+    private static var trackingLeave = false
 
     private let handle: HWND
     private var closed = false
     private var pixels: [UInt32] = []
+    /// Where the window was before it took the screen, so it can be put back.
+    private var restore: RECT?
 
     private(set) var size: (width: Int, height: Int)
 
@@ -130,6 +135,67 @@ final class Win32Window: WindowBackend {
         // will not import as a constant.
         _ = SetWindowPos(handle, HWND(bitPattern: 1), 0, 0, 0, 0,
                          UINT(SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE))
+    }
+
+    /// Takes the monitor the window is on, or gives it back.
+    ///
+    /// No style to change: the window is a `WS_POPUP` with no frame already,
+    /// which is what the drawn title bar is for — so going full screen is a
+    /// move and a resize onto the monitor rectangle and nothing else. The
+    /// rectangle includes the taskbar's strip, which is the point.
+    ///
+    /// What comes back is the *client* rectangle afterwards, not the monitor
+    /// rectangle that was asked for, and the two are not always the same. On a
+    /// display with a scaling factor, a process that has not declared itself
+    /// DPI-aware is shown a virtualised desktop — but Windows hands a window
+    /// covering the whole screen the real pixels anyway. Asking for 2560×1440
+    /// and being given 3840×2160 is normal, and drawing the canvas the monitor
+    /// rectangle described would put a picture up at two thirds size with the
+    /// bottom third of the interface off the screen.
+    func setFullScreen(_ on: Bool) -> (width: Int, height: Int)? {
+        guard !closed else { return nil }
+
+        if on {
+            var frame = RECT(left: 0, top: 0, right: 0, bottom: 0)
+            _ = GetWindowRect(handle, &frame)
+            if restore == nil { restore = frame }
+
+            guard let monitor = MonitorFromWindow(handle, DWORD(MONITOR_DEFAULTTONEAREST)) else {
+                return nil
+            }
+            var info = MONITORINFO()
+            info.cbSize = DWORD(MemoryLayout<MONITORINFO>.size)
+            guard GetMonitorInfoW(monitor, &info) else { return nil }
+
+            let area = info.rcMonitor
+            // nil for the insert-after handle is HWND_TOP, and without
+            // SWP_NOZORDER it means what it says: over everything else.
+            _ = SetWindowPos(handle, nil, area.left, area.top,
+                             area.right - area.left, area.bottom - area.top,
+                             UINT(SWP_NOACTIVATE | SWP_SHOWWINDOW))
+            _ = SetForegroundWindow(handle)
+            return adoptClientSize()
+        }
+
+        guard let frame = restore else { return nil }
+        restore = nil
+        _ = SetWindowPos(handle, nil, frame.left, frame.top,
+                         frame.right - frame.left, frame.bottom - frame.top,
+                         UINT(SWP_NOZORDER | SWP_NOACTIVATE))
+        return adoptClientSize()
+    }
+
+    /// What the window actually ended up with, which is the only measurement
+    /// the canvas may be drawn from.
+    @discardableResult
+    private func adoptClientSize() -> (width: Int, height: Int)? {
+        var client = RECT(left: 0, top: 0, right: 0, bottom: 0)
+        guard GetClientRect(handle, &client) else { return nil }
+        let width = Int(client.right - client.left), height = Int(client.bottom - client.top)
+        guard width > 0, height > 0 else { return nil }
+        size = (width, height)
+        Win32Window.currentSize = size
+        return size
     }
 
     /// Moves the window with the pointer until the button comes up.
@@ -313,7 +379,21 @@ final class Win32Window: WindowBackend {
         case UINT(WM_LBUTTONDOWN):
             queue.append(.mouseDown(x: mouseX(lParam), y: mouseY(lParam)))
             return 0
+        case UINT(WM_MOUSELEAVE):
+            trackingLeave = false
+            queue.append(.mouseExited)
+            return 0
         case UINT(WM_MOUSEMOVE):
+            // Asked for once per visit: Windows sends WM_MOUSELEAVE exactly
+            // once and then forgets, so the request is renewed whenever the
+            // pointer turns up again.
+            if !trackingLeave {
+                var tracking = TRACKMOUSEEVENT()
+                tracking.cbSize = DWORD(MemoryLayout<TRACKMOUSEEVENT>.size)
+                tracking.dwFlags = DWORD(TME_LEAVE)
+                tracking.hwndTrack = window
+                if TrackMouseEvent(&tracking) { trackingLeave = true }
+            }
             // Screen coordinates rather than lParam: the window is moving under
             // the pointer, so anything relative to it chases its own tail.
             if let drag = drag {

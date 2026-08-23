@@ -135,22 +135,38 @@ final class WindowTests: XCTestCase {
     /// so the report itself is worth checking: the play button has to be under
     /// the pixels that show a play button.
     func testControlsSitInsideTheWindow() {
-        var screen = PlayerScreen()
-        screen.playlist = ["one", "two"]
-        let controls = PlayerScreenRenderer.controls(for: screen)
-        let height = PlayerScreenRenderer.height(for: screen)
+        // All three shapes: the strip and the stage have their own widths, and
+        // a control reported outside the canvas is a button drawn where nobody
+        // can reach it.
+        for layout in PlayerScreen.Layout.allCases {
+            var screen = PlayerScreen()
+            screen.playlist = ["one", "two"]
+            screen.layout = layout
+            screen.stageWidth = 1280
+            screen.stageHeight = 720
 
-        XCTAssertFalse(controls.isEmpty)
-        for control in controls {
-            XCTAssertGreaterThanOrEqual(control.rect.x, 0)
-            XCTAssertGreaterThanOrEqual(control.rect.y, 0)
-            XCTAssertLessThanOrEqual(control.rect.maxX, PlayerScreenRenderer.width)
-            XCTAssertLessThanOrEqual(control.rect.maxY, height, "a control is off the bottom")
+            let controls = PlayerScreenRenderer.controls(for: screen)
+            let width = PlayerScreenRenderer.width(for: screen)
+            let height = PlayerScreenRenderer.height(for: screen)
+            let canvas = PlayerScreenRenderer.render(screen)
+            XCTAssertEqual(canvas.width, width, "\(layout) draws a canvas of another width")
+            XCTAssertEqual(canvas.height, height, "\(layout) draws a canvas of another height")
+
+            XCTAssertFalse(controls.isEmpty)
+            for control in controls {
+                XCTAssertGreaterThanOrEqual(control.rect.x, 0)
+                XCTAssertGreaterThanOrEqual(control.rect.y, 0)
+                XCTAssertLessThanOrEqual(control.rect.maxX, width, "\(layout): off the right")
+                XCTAssertLessThanOrEqual(control.rect.maxY, height, "\(layout): off the bottom")
+            }
         }
 
         // The play button is the third of the six transport buttons, and the
         // canvas under it must not be the window background — that would mean
         // the hit box and the drawing had parted company.
+        var screen = PlayerScreen()
+        screen.playlist = ["one", "two"]
+        let controls = PlayerScreenRenderer.controls(for: screen)
         let canvas = PlayerScreenRenderer.render(screen)
         guard let play = controls.first(where: {
             if case .playPause = $0.role { return true } else { return false }

@@ -15,9 +15,15 @@ public extension PlayerScreen {
          currentIndex: Int? = nil,
          status: String = "",
          visibleRows: Int = 17,
-         showTracker: Bool = true) {
+         showTracker: Bool = true,
+         layout: Layout = .window,
+         waveform: [Float] = [],
+         visualisation: Visualisation = .levels) {
         self.init()
 
+        self.layout = layout
+        self.waveform = waveform
+        self.visualisation = visualisation
         self.showTracker = showTracker
         self.playlist = playlist
         self.currentIndex = currentIndex

@@ -89,6 +89,35 @@ public struct Canvas {
         fill(Rect(0, 0, width, height), colour)
     }
 
+    /// A line one pixel wide, by the difference algorithm.
+    ///
+    /// The scope and the ripple are the only things that need it: everything
+    /// else in the skin is a rectangle, and a framebuffer that could only draw
+    /// rectangles was fine until the audio had to be drawn as a shape.
+    /// `clip` keeps the line inside a panel rather than only inside the canvas,
+    /// which is what the ripple needs: its rings are drawn from a geometry that
+    /// happily runs past the box they belong to.
+    public mutating func line(from start: (x: Int, y: Int), to end: (x: Int, y: Int),
+                              _ colour: Colour, clip: Rect? = nil) {
+        var x = start.x, y = start.y
+        let stepX = x < end.x ? 1 : -1
+        let stepY = y < end.y ? 1 : -1
+        let dx = abs(end.x - x), dy = -abs(end.y - y)
+        var error = dx + dy
+
+        while true {
+            if let clip {
+                if x >= clip.x, x < clip.maxX, y >= clip.y, y < clip.maxY { set(x, y, colour) }
+            } else {
+                set(x, y, colour)
+            }
+            if x == end.x, y == end.y { return }
+            let doubled = 2 * error
+            if doubled >= dy { error += dy; x += stepX }
+            if doubled <= dx { error += dx; y += stepY }
+        }
+    }
+
     /// A one-pixel outline, drawn inside the rectangle.
     public mutating func frame(_ rect: Rect, _ colour: Colour, width lineWidth: Int = 1) {
         fill(Rect(rect.x, rect.y, rect.width, lineWidth), colour)

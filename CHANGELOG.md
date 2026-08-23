@@ -8,6 +8,34 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Mini and Full in the portable player. The two gadgets on the right of the VIEW
+  row were drawn and wired to nothing, with a comment saying the portable
+  interface could not do either yet. It can: `WindowBackend` gained a
+  `setFullScreen` the Win32 side implements by moving the frameless popup onto
+  the monitor rectangle, and the skin gained the two layouts the gadgets name —
+  a 340-point strip with the title, three buttons, one MIX bar and the position
+  slider, and a stage with the tracker at twice the size, the song across the
+  top and the transport along the bottom. Escape leaves either one, the strip's
+  close and zoom gadgets both lead back rather than out, and a backend that
+  cannot go full screen says so in the status line instead of doing nothing
+- The visualisations, in the portable player. The panel that only ever showed
+  per-voice levels now draws the same three the app offers — levels, an
+  oscilloscope of the mix, and the ripple field — cycled by a gadget in the VIEW
+  row that is named after what it is showing, by clicking the picture, or from
+  the View menu. All three occupy one box, so switching between them does not
+  resize the window, and the meters lay themselves out in a row rather than a
+  column where the box is short, which is what the stage's footer strip is
+- A tool tip on every gadget the skin draws, out of the same `tooltip.*`
+  translations the app hangs on its buttons with `.help`. The text comes from
+  the same table the hit testing does, so a gadget cannot be called one thing on
+  one platform and another on the other. Win32 asks for `WM_MOUSELEAVE` so a tip
+  raised at the edge of the window does not stay up over a window nobody is
+  pointing at
+- `screenshot --layout`, `--visualiser`, `--width`, `--height` and `--pointer`,
+  so any of the three shapes, any of the three visualisations, and the tool tip
+  of whatever is at a given point can be drawn to a PNG without a window — which
+  is how the layouts here were measured rather than eyeballed
+
 - `build.ps1`, the Windows counterpart to `make install`. `make` is the entry
   point on macOS and most of what it does — the app bundle, the disk image,
   notarisation — has no meaning anywhere else, so what a Windows script is for
@@ -56,6 +84,14 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Clicking a line of the playlist plays that module. The list drew which module
+  was playing and had no hit box on any of its rows, so there was no way to say
+  which one should — the same fault the LED and Load gadgets had, and it is
+  fixed the same way: one function reports where each row went, and the drawing
+  and the hit testing both read it
+- The volume slider, which had been drawn from one set of numbers and hit-tested
+  from none at all. It moves the replayer's gain now, and its rectangle comes
+  from the same place the drawing does
 - The LED and Load gadgets in the VIEW row of the portable skin were painted on
   and neither was reachable: the renderer and the hit testing each carried
   their own copy of the widths and the spacing, and only the drawing side had

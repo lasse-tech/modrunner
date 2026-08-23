@@ -174,6 +174,21 @@ modrunner window [module]...    # the Classic interface, to click on;
                                 # opens empty, Project > Open Files fills it
 ```
 
+It has the same three shapes the app does — the window, **Mini**, and **Full**,
+switched by the two gadgets on the right of the VIEW row, by the View menu under
+the right button, or left with Escape — the same three visualisations, and a
+tool tip on every gadget, out of the same translations the app's `.help` texts
+come from. Clicking a line of the playlist plays that module.
+
+`screenshot` draws any of it without a window, which is how the layouts are
+measured rather than eyeballed:
+
+```sh
+modrunner screenshot <module> --layout mini -o mini.png
+modrunner screenshot <module> --layout stage --width 1920 --height 1080 -o stage.png
+modrunner screenshot <module> --visualiser ripple --pointer 170,500 -o tip.png
+```
+
 #### Windows
 
 There is no app bundle to build. `Package.swift` leaves the SwiftUI target out

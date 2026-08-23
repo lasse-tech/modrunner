@@ -17,6 +17,9 @@ public enum MenuRole {
     case previousModule, nextModule
     case showTracker
     case minimise, sendToBack
+    /// The two layout switches, the same pair the View menu has on macOS.
+    case fullScreen, miniPlayer
+    case visualisation(PlayerScreen.Visualisation)
 }
 
 public struct MenuEntry {
@@ -87,9 +90,16 @@ extension PlayerScreenRenderer {
                 MenuEntry(title: "Previous Module", role: .previousModule),
                 MenuEntry(title: "Next Module", role: .nextModule)
             ]),
-            MenuHeading(title: "Settings", entries: [
-                MenuEntry(title: "Show Tracker", role: .showTracker, checked: screen.showTracker)
-            ])
+            MenuHeading(title: "View", entries: [
+                MenuEntry(title: "Show Tracker", role: .showTracker, checked: screen.showTracker),
+                MenuEntry(title: "Full Screen", role: .fullScreen,
+                          checked: screen.layout == .stage),
+                MenuEntry(title: "Mini Player", role: .miniPlayer,
+                          checked: screen.layout == .mini)
+            ] + PlayerScreen.Visualisation.allCases.map {
+                MenuEntry(title: $0.title, role: .visualisation($0),
+                          checked: screen.visualisation == $0)
+            })
         ]
     }
 
@@ -114,7 +124,8 @@ extension PlayerScreenRenderer {
         let entries = headings[index].entries
         let widest = entries.map { Font.width(of: $0.title) }.max() ?? 0
         let boxWidth = Theme.bevel * 2 + Font.cellWidth + 8 + widest + 8
-        let x = Swift.max(0, Swift.min(menuHeadingRects(for: screen)[index].x, width - boxWidth))
+        let x = Swift.max(0, Swift.min(menuHeadingRects(for: screen)[index].x,
+                                       width(for: screen) - boxWidth))
         return Rect(x, titleBarHeight,
                     boxWidth, entries.count * menuRowHeight + Theme.bevel * 2)
     }
@@ -154,7 +165,7 @@ extension PlayerScreenRenderer {
                           _ selection: PlayerScreen.MenuSelection) {
         let headings = menu(for: screen)
 
-        canvas.bevel(Rect(0, 0, width, titleBarHeight), .raised)
+        canvas.bevel(Rect(0, 0, width(for: screen), titleBarHeight), .raised)
         for (index, rect) in menuHeadingRects(for: screen).enumerated() {
             let open = selection.heading == index
             if open { canvas.fill(rect, Theme.highlight) }

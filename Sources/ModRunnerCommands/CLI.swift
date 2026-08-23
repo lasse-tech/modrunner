@@ -34,6 +34,10 @@ public enum CLI {
       --filter              render through the Amiga output filter
       --block <n>           dump one block instead of all of them
       --no-tracker          leave the tracker panel out of the screenshot
+      --layout <name>       which shape to draw: window, mini or stage
+      --visualiser <name>   levels, waveform or ripple
+      --width, --height     the screen the stage layout is drawn for
+      --pointer <x,y>       draw the tool tip of whatever is at that point
       --no-duration         skip the duration measurement in info, which renders
                             the module to find out
 

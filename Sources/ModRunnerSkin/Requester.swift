@@ -49,10 +49,11 @@ extension PlayerScreenRenderer {
         let widest = aboutText.map { Font.width(of: $0) }.max() ?? 0
         let boxWidth = widest + 32
         let boxHeight = aboutText.count * aboutLineHeight + aboutButtonHeight + 28
+        let canvasWidth = width(for: screen)
         let canvasHeight = height(for: screen)
-        return Rect(Swift.max(0, (width - boxWidth) / 2),
+        return Rect(Swift.max(0, (canvasWidth - boxWidth) / 2),
                     Swift.max(0, (canvasHeight - boxHeight) / 2),
-                    Swift.min(boxWidth, width), Swift.min(boxHeight, canvasHeight))
+                    Swift.min(boxWidth, canvasWidth), Swift.min(boxHeight, canvasHeight))
     }
 
     public static func aboutButton(for screen: PlayerScreen) -> Rect {

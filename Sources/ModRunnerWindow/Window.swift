@@ -24,6 +24,14 @@ public protocol WindowBackend: AnyObject {
     func minimise()
     func sendToBack()
 
+    /// Takes the whole screen, or gives it back, and answers with the size it
+    /// ended up at — which is what the skin then draws the stage into.
+    ///
+    /// nil means this backend cannot do it. That is a real answer rather than a
+    /// failure: the player says so in its status line and stays where it is,
+    /// which beats a Full gadget that looks pressed and changes nothing.
+    func setFullScreen(_ on: Bool) -> (width: Int, height: Int)?
+
     /// Starts a title bar drag. Called when a click lands on the drawn bar
     /// rather than on a gadget, because without system chrome nothing else
     /// would move the window.
@@ -48,6 +56,7 @@ extension WindowBackend {
     public func minimise() {}
     public func sendToBack() {}
     public func beginDrag() {}
+    public func setFullScreen(_ on: Bool) -> (width: Int, height: Int)? { nil }
     public func chooseFiles(startingAt: URL?) -> [URL] { [] }
     public func chooseDrawer(startingAt: URL?) -> URL? { nil }
 }
@@ -64,6 +73,9 @@ public enum WindowEvent: Equatable {
     case rightMouseDown(x: Int, y: Int)
     case rightMouseUp(x: Int, y: Int)
     case mouseMoved(x: Int, y: Int)
+    /// The pointer left the window. Only the tool tips care: without it, one
+    /// raised at the edge would stay up over a window nobody is pointing at.
+    case mouseExited
     case key(Key)
 
     public enum Key: Equatable {
